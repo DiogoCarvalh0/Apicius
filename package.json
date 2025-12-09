@@ -1,0 +1,38 @@
+{
+  "name": "apicius",
+  "productName": "Apicius",
+  "version": "1.0.0",
+  "description": "A local Mac App to save recipes",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^39.2.3",
+    "electron-builder": "^24.13.3",
+    "jimp": "^1.6.0"
+  },
+  "build": {
+    "appId": "com.example.apicius",
+    "productName": "Apicius",
+    "mac": {
+      "category": "public.app-category.lifestyle",
+      "target": [
+        "dmg",
+        "mas"
+      ],
+      "icon": "assets/icon.icns",
+      "identity": null
+    },
+    "files": [
+      "**/*",
+      "!dist/**/*",
+      "!node_modules/.cache/**/*"
+    ]
+  }
+}
