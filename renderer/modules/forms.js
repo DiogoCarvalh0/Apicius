@@ -23,6 +23,10 @@ export function initForms() {
         addInstructionSectionBtnHandler();
         
         elements.addModal.classList.remove('hidden');
+        
+        // Reset scroll position
+        const modalBody = elements.addModal.querySelector('.modal-body');
+        if (modalBody) modalBody.scrollTop = 0;
     });
 
     elements.closeBtn.addEventListener('click', () => {
@@ -124,6 +128,10 @@ export function initForms() {
         
         document.querySelector('#add-modal h2').textContent = 'Edit Recipe';
         elements.addModal.classList.remove('hidden');
+        
+        // Reset scroll position
+        const modalBody = elements.addModal.querySelector('.modal-body');
+        if (modalBody) modalBody.scrollTop = 0;
     });
 
     elements.recipeTitle.addEventListener('input', (e) => {
@@ -189,7 +197,7 @@ export function initForms() {
 
         const newRecipe = {
             id: elements.addForm.dataset.editId || Date.now().toString(),
-            title: elements.recipeTitle.value,
+            title: elements.recipeTitle.value.trim(),
             description: elements.recipeDescription.value,
             yield: elements.recipeYield.value,
             activeTime: elements.recipeActiveTime.value,
@@ -272,7 +280,7 @@ function createSection(type) {
                 </div>
                 <button type="button" class="remove-btn remove-item-btn">&times;</button>
             `;
-            initRecipeReferenceAutocomplete(row.querySelector('.name-input'));
+            initIngredientAutocomplete(row.querySelector('.name-input'));
         } else {
             row.innerHTML = `
                 <input type="text" class="clean-input item-input" placeholder="Step description">
@@ -526,6 +534,147 @@ function initTagAutocomplete() {
             !elements.tagAutocompleteDropdown.contains(e.target)) {
             elements.tagAutocompleteDropdown.classList.add('hidden');
             currentFocus = -1;
+        }
+    });
+}
+
+function initIngredientAutocomplete(inputElement) {
+    if (!inputElement) return;
+
+    let currentFocus = -1;
+
+    // Helper: Normalize ingredient string
+    function normalize(str) {
+        return str.trim().toLowerCase();
+    }
+
+    // Get all unique ingredients from existing recipes
+    function getAllIngredients() {
+        const allIngredients = new Set();
+        state.recipes.forEach(r => {
+            if (r.ingredients && Array.isArray(r.ingredients)) {
+                r.ingredients.forEach(section => {
+                    if (section.items) {
+                        section.items.forEach(item => {
+                            let name = '';
+                            if (typeof item === 'object' && item !== null) {
+                                name = item.name;
+                            } else {
+                                name = parseIngredient(item);
+                            }
+                            if (name) allIngredients.add(name); // Keep original casing for suggestion
+                        });
+                    }
+                });
+            }
+        });
+        return Array.from(allIngredients).sort();
+    }
+
+    // Create unique ID for this input's dropdown
+    let dropdownId = inputElement.dataset.dropdownId;
+    if (!dropdownId) {
+        dropdownId = 'ing-autocomplete-' + Math.random().toString(36).substr(2, 9);
+        inputElement.dataset.dropdownId = dropdownId;
+    }
+
+    // Create or get dropdown element
+    let dropdown = document.getElementById(dropdownId);
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = dropdownId;
+        dropdown.className = 'autocomplete-dropdown hidden';
+        document.body.appendChild(dropdown); // Append to body for z-index/fixed pos
+    }
+
+    function showSuggestions() {
+        const val = inputElement.value;
+        if (!val) {
+            closeAutocomplete();
+            return;
+        }
+
+        const currentVal = normalize(val);
+        const allIngs = getAllIngredients();
+        
+        // Filter unique usages
+        const suggestions = allIngs.filter(ing => 
+            normalize(ing).includes(currentVal) && normalize(ing) !== currentVal
+        );
+
+        if (suggestions.length === 0) {
+            closeAutocomplete();
+            return;
+        }
+
+        dropdown.innerHTML = '';
+        currentFocus = -1;
+
+        suggestions.slice(0, 10).forEach((ing, index) => { // Limit to 10
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.textContent = ing;
+            item.addEventListener('click', () => {
+                inputElement.value = ing;
+                closeAutocomplete();
+                // Optionally move focus to next input or just keep focus
+                inputElement.focus();
+            });
+            dropdown.appendChild(item);
+        });
+
+        // Position Dropdown
+        const rect = inputElement.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = (rect.bottom) + 'px';
+        dropdown.style.left = (rect.left) + 'px';
+        dropdown.style.width = rect.width + 'px';
+        
+        dropdown.classList.remove('hidden');
+    }
+
+    function closeAutocomplete() {
+        dropdown.classList.add('hidden');
+        currentFocus = -1;
+    }
+
+    inputElement.addEventListener('input', showSuggestions);
+
+    inputElement.addEventListener('keydown', (e) => {
+        if (dropdown.classList.contains('hidden')) return;
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            currentFocus++;
+            if (currentFocus >= items.length) currentFocus = 0;
+            setActive(items);
+        } else if (e.key === 'ArrowUp') {
+            currentFocus--;
+            if (currentFocus < 0) currentFocus = items.length - 1;
+            setActive(items);
+        } else if (e.key === 'Enter') {
+            
+            if (currentFocus > -1) {
+                e.preventDefault();
+                items[currentFocus].click();
+            }
+        } else if (e.key === 'Escape') {
+            closeAutocomplete();
+        }
+    });
+
+    function setActive(items) {
+        items.forEach(x => x.classList.remove('active'));
+        if (currentFocus >= 0 && currentFocus < items.length) {
+            items[currentFocus].classList.add('active');
+            items[currentFocus].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (e.target !== inputElement && e.target !== dropdown && !dropdown.contains(e.target)) {
+            closeAutocomplete();
         }
     });
 }

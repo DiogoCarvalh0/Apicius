@@ -21,7 +21,7 @@ npm install
 npm start
 
 # Build for distribution
-npm run build
+npm run dist
 ```
 
 ## Usage

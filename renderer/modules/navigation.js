@@ -12,6 +12,9 @@ export function showDetail(recipe) {
     elements.addBtn.classList.add('hidden');
     elements.detailView.classList.remove('hidden');
     
+    // Scroll to top
+    window.scrollTo(0, 0);
+    
     // Populate Hero
     let imageSrc = 'https://placehold.co/1200x600/png?text=Recipe';
     if (recipe.image) {
@@ -130,12 +133,19 @@ function checkSectionCompletion(sectionDiv, listElement) {
     }
 }
 
+import { filterRecipes } from './filters.js';
+
+// ... existing imports ...
+
 export function showGrid() {
     setCurrentRecipeId(null);
     elements.heroSection.classList.remove('hidden');
     elements.grid.classList.remove('hidden');
     elements.addBtn.classList.remove('hidden');
     elements.detailView.classList.add('hidden');
+    
+    // Re-apply filters to ensure grid matches UI state
+    filterRecipes();
 }
 
 export function setupRecipeReferenceListeners() {

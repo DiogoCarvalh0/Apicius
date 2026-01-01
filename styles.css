@@ -72,6 +72,11 @@ header {
     padding: 40px 0 20px 0; /* Increased top padding */
     margin-bottom: 40px;
     -webkit-app-region: drag; /* Enable window dragging on header */
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background-color: var(--bg-color);
+    transition: background-color 0.3s;
 }
 
 .logo {
@@ -161,17 +166,42 @@ h1 {
 .filters {
     display: flex;
     gap: 10px;
+    align-items: center; /* Align items vertically */
+    flex-wrap: wrap; /* Allow wrapping on small screens */
 }
 
-select {
-    padding: 8px 16px;
+/* Base styles for all filter buttons/selects */
+.filters select, 
+.filters .dropdown-btn,
+.rating-filter-container {
+    height: 44px; /* Enforce consistent height */
+    padding: 0 16px; /* Consistent horizontal padding */
     border-radius: 6px;
     border: 1px solid var(--border-color);
     background-color: var(--card-bg);
     color: var(--text-color);
     font-size: 0.9rem;
+    box-sizing: border-box; /* Include border/padding in height */
+    display: flex;
+    align-items: center;
+}
+
+select {
+    /* select-specific resets if needed, but the above covers most */
     cursor: pointer;
     outline: none;
+    appearance: none; /* Remove default arrow to style consistently if desired, or keep */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px; /* Space for arrow */
+}
+
+/* Rating container specific */
+.rating-filter-container {
+    gap: 10px;
+    padding: 0 10px; /* Slightly less padding as stars are wide */
 }
 
 /* Grid */
@@ -736,11 +766,16 @@ input[type="file"] {
     background-color: transparent;
     border: 1px solid #ff4444;
     color: #ff4444;
-    padding: 8px 16px;
-    border-radius: 6px;
+    height: 44px;
+    padding: 0 24px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 500;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-danger:hover {
@@ -1217,11 +1252,15 @@ body.dark-theme {
     background-color: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    padding: 10px 24px;
+    height: 44px;
+    padding: 0 24px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
     transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -1340,29 +1379,7 @@ body.dark-theme {
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-/* Pretty Back Button */
-#back-btn {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-}
 
-#back-btn:hover {
-    background-color: var(--card-bg);
-    border-color: var(--primary-color);
-    transform: translateX(-3px); /* Subtle slide left */
-    color: var(--primary-color);
-}
 
 /* Rating Filter */
 .rating-filter-container {
@@ -1373,7 +1390,7 @@ body.dark-theme {
     border: 1px solid var(--border-color);
     padding: 6px 12px;
     border-radius: 8px;
-    height: 42px; /* Match other inputs */
+    height: 44px; /* Match other inputs */
 }
 
 .star-rating-input {
@@ -1406,6 +1423,36 @@ body.dark-theme {
 
 .clear-btn.hidden {
     display: none;
+}
+
+/* Pill Button (Matches Back Button) */
+.btn-pill {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0 24px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    height: 44px;
+}
+
+#back-btn {
+    margin-bottom: 40px;
+}
+
+.btn-pill:hover {
+    background-color: var(--card-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 /* Utility for layout stability */

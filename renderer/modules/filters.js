@@ -29,6 +29,94 @@ export function initFilters() {
             elements.filterIngredientsDropdown.classList.remove('active');
         }
     });
+
+    // Keyboard Navigation for Filters
+    let searchBuffer = '';
+    let searchTimeout = null;
+
+    document.addEventListener('keydown', (e) => {
+        // Only trigger if a dropdown is active
+        const tagsActive = elements.filterTagsDropdown.classList.contains('active');
+        const ingredientsActive = elements.filterIngredientsDropdown.classList.contains('active');
+
+        if (!tagsActive && !ingredientsActive) return;
+
+        // If user is searching in the main search bar, don't hijack keyboard? 
+        // Actually, if dropdown is open, user intention is likely interaction with it.
+        // But let's check focus.
+        if (document.activeElement === elements.searchInput) return;
+
+        // Reset buffer logic
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchBuffer = '';
+        }, 800);
+
+        // Handle printable characters
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            searchBuffer += e.key.toLowerCase();
+            
+            const activeList = tagsActive ? elements.filterTagsList : elements.filterIngredientsList;
+            const itemSelector = tagsActive ? '.tag-option' : '.tag-option'; 
+            
+            const items = Array.from(activeList.querySelectorAll(itemSelector));
+            
+            const matchedItem = items.find(item => {
+                const label = item.textContent.trim().toLowerCase();
+                return label.startsWith(searchBuffer);
+            });
+
+            if (matchedItem) {
+                // Manual scroll to avoid scrolling the whole page
+                // Calculate position relative to the container
+                const itemTop = matchedItem.getBoundingClientRect().top;
+                const containerTop = activeList.getBoundingClientRect().top;
+                const relativeTop = itemTop - containerTop;
+                
+                activeList.scrollTop = activeList.scrollTop + relativeTop;
+
+                // Optional: visual highlight?
+                items.forEach(i => i.style.backgroundColor = '');
+                matchedItem.style.backgroundColor = 'var(--hover-color)'; 
+                setTimeout(() => matchedItem.style.backgroundColor = '', 1000);
+            }
+        }
+    });
+    // Clear All Filters
+    if (elements.clearAllFiltersBtn) {
+        elements.clearAllFiltersBtn.addEventListener('click', clearAllFilters);
+    }
+}
+
+export function clearAllFilters() {
+    // Reset Search
+    elements.searchInput.value = '';
+    
+    // Reset Time
+    elements.filterTimeCategory.value = '';
+    
+    // Reset Rating
+    setCurrentMinRating(0);
+    const stars = elements.filterRatingStars.children;
+    for (let i = 0; i < 5; i++) {
+        stars[i].style.color = '#ccc';
+        stars[i].style.background = 'none';
+        stars[i].style.webkitBackgroundClip = 'initial';
+        stars[i].style.webkitTextFillColor = 'initial';
+    }
+    if (elements.filterRatingValueDisplay) elements.filterRatingValueDisplay.textContent = 'Any';
+    if (elements.clearRatingFilterBtn) elements.clearRatingFilterBtn.classList.add('hidden');
+
+    // Reset Tags
+    document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
+    updateFilterButtonText(elements.filterTagsBtn, 'Tags', '.tag-checkbox');
+
+    // Reset Ingredients
+    document.querySelectorAll('.ingredient-checkbox').forEach(cb => cb.checked = false);
+    updateFilterButtonText(elements.filterIngredientsBtn, 'Ingredients', '.ingredient-checkbox');
+
+    // Re-render
+    filterRecipes();
 }
 
 export function populateTagsFilter() {

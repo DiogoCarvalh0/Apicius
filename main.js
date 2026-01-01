@@ -7,7 +7,7 @@ const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
 
 // Default to 'Database' folder in app directory
-const defaultStoragePath = path.join(__dirname, 'Database');
+const defaultStoragePath = path.join(app.getPath('userData'), 'Database');
 let storagePath = defaultStoragePath;
 
 let recipesFile = path.join(storagePath, 'recipes.json');
@@ -41,8 +41,10 @@ if (storagePath === defaultStoragePath) {
   const rootRecipes = path.join(__dirname, 'recipes.json');
   if (fs.existsSync(rootRecipes) && !fs.existsSync(recipesFile)) {
     try {
-      fs.renameSync(rootRecipes, recipesFile);
+      fs.copyFileSync(rootRecipes, recipesFile);
       console.log('Migrated recipes.json to Database folder');
+      // Try to delete old file, but ignore error if read-only (ASAR)
+      try { fs.unlinkSync(rootRecipes); } catch (e) {}
     } catch (err) {
       console.error('Failed to migrate recipes.json:', err);
     }
@@ -52,8 +54,20 @@ if (storagePath === defaultStoragePath) {
   const rootImages = path.join(__dirname, 'images');
   if (fs.existsSync(rootImages) && !fs.existsSync(imagesDir)) {
     try {
-      fs.renameSync(rootImages, imagesDir);
+      if (!fs.existsSync(imagesDir)) {
+          fs.mkdirSync(imagesDir, { recursive: true });
+      }
+      const files = fs.readdirSync(rootImages);
+      for (const file of files) {
+          try {
+              fs.copyFileSync(path.join(rootImages, file), path.join(imagesDir, file));
+          } catch (e) {
+              console.error('Failed to copy image:', file, e);
+          }
+      }
       console.log('Migrated images folder to Database folder');
+      // Try to delete old dir, ignore if read-only
+      try { fs.rmSync(rootImages, { recursive: true, force: true }); } catch (e) {}
     } catch (err) {
       console.error('Failed to migrate images folder:', err);
     }

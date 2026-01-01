@@ -65,7 +65,9 @@ export const elements = {
     filterTimeCategory: document.getElementById('filter-time-category'),
     filterRatingStars: document.getElementById('filter-rating-stars'),
     filterRatingValueDisplay: document.getElementById('filter-rating-value'),
+    filterRatingValueDisplay: document.getElementById('filter-rating-value'),
     clearRatingFilterBtn: document.getElementById('clear-rating-filter'),
+    clearAllFiltersBtn: document.getElementById('clear-all-filters-btn'),
 
     // Settings Elements
     settingsBtn: document.getElementById('settings-btn'),
