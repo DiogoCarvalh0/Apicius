@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Set App Name for Mac early to ensure getPath('userData') is correct
+app.setName('Apicius');
+
 // Config Setup
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
@@ -19,10 +22,20 @@ function loadConfig() {
     try {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       if (config.storagePath && fs.existsSync(config.storagePath)) {
-        storagePath = config.storagePath;
-        // Update derived paths
-        recipesFile = path.join(storagePath, 'recipes.json');
-        imagesDir = path.join(storagePath, 'images');
+        // Fix for "Sticky" Desktop path in production:
+        // If we are packaged (production) and the path looks like the default Dev path on Desktop, ignore it.
+        // This forces the app to use the standard Application Support path instead.
+        const isLegacyDevPath = config.storagePath.includes(path.join('Desktop', 'Apicius', 'Database'));
+        
+        if (app.isPackaged && isLegacyDevPath) {
+             console.log('Ignoring legacy development path in production:', config.storagePath);
+             // Do NOT set storagePath, let it fallback to defaultStoragePath
+        } else {
+             storagePath = config.storagePath;
+             // Update derived paths
+             recipesFile = path.join(storagePath, 'recipes.json');
+             imagesDir = path.join(storagePath, 'images');
+        }
       }
     } catch (e) {
       console.error('Failed to load config:', e);
@@ -96,8 +109,6 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
-// Set App Name for Mac
-app.setName('Apicius');
 
 app.whenReady().then(() => {
   // Set Dock Icon for Mac
