@@ -6,9 +6,11 @@ import { renderRecipeReferences } from './recipe-references.js';
 export function showDetail(recipe) {
     setCurrentRecipeId(recipe.id);
     
-    // Hide Grid & Hero, Show Detail
+    // Hide Grid, Hero & Map, Show Detail
     elements.heroSection.classList.add('hidden');
     elements.grid.classList.add('hidden');
+    elements.mapView.classList.add('hidden');
+    if (elements.mapToggleBtn) elements.mapToggleBtn.classList.remove('active');
     elements.addBtn.classList.add('hidden');
     elements.detailView.classList.remove('hidden');
     
@@ -141,9 +143,18 @@ export function showGrid() {
     setCurrentRecipeId(null);
     elements.heroSection.classList.remove('hidden');
     elements.grid.classList.remove('hidden');
+    elements.searchContainer.classList.remove('hidden');
+    if (elements.searchBar) elements.searchBar.classList.remove('hidden');
+    elements.mapView.classList.add('hidden');
+    if (elements.mapToggleBtn) elements.mapToggleBtn.classList.remove('active');
     elements.addBtn.classList.remove('hidden');
     elements.detailView.classList.add('hidden');
     
+    // Reset Hero Title
+    if (elements.heroTitle) elements.heroTitle.textContent = 'Recipes';
+    
+    window.scrollTo(0, 0);
+
     // Re-apply filters to ensure grid matches UI state
     filterRecipes();
 }

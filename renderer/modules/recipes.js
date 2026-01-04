@@ -10,4 +10,5 @@ export async function loadRecipes() {
     populateIngredientsFilter();
     initRatingFilter();
     renderRecipes(recipes);
+    document.dispatchEvent(new CustomEvent('recipes-updated', { detail: recipes }));
 }

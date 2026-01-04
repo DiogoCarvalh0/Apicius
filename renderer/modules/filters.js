@@ -318,6 +318,9 @@ export function filterRecipes() {
 
     renderRecipes(filtered);
     
+    // Notify Map and other components
+    document.dispatchEvent(new CustomEvent('recipes-updated', { detail: filtered }));
+    
     if (selectedTags.length > 0) {
         elements.filterTagsBtn.textContent = `Tags (${selectedTags.length})`;
     } else {

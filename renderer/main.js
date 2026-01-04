@@ -6,6 +6,7 @@ import { initActions } from './modules/actions.js';
 import { loadRecipes } from './modules/recipes.js';
 import { generateMacIcon } from './modules/icon.js';
 import { setupRecipeReferenceListeners } from './modules/navigation.js';
+import { MapController } from './mapController.js';
 
 // Initialize all modules
 function init() {
@@ -15,6 +16,7 @@ function init() {
     initActions();
     loadRecipes();
     setupRecipeReferenceListeners();
+    MapController.init();
     
     // Auto-run icon generation
     generateMacIcon();

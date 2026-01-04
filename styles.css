@@ -1033,17 +1033,29 @@ input[type="file"] {
 }
 
 .icon-btn {
-    background: none;
+    background: transparent;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.75rem; /* Base size for headers icons */
     cursor: pointer;
-    padding: 5px;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0; /* Prevent stretching */
+    padding: 0;
     border-radius: 50%;
-    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+    color: var(--text-color);
+}
+
+/* Specific override for Map Toggle to visually match size */
+#map-toggle-btn {
+    font-size: 1.5rem !important; /* Force override for emoji visual size */
 }
 
 .icon-btn:hover {
-    background-color: rgba(0,0,0,0.05);
+    background-color: var(--border-color);
 }
 
 /* Settings Modal */
@@ -1466,7 +1478,7 @@ body.dark-theme {
     height: 44px;
 }
 
-#back-btn {
+#back-btn, #map-back-btn {
     margin-bottom: 40px;
 }
 
@@ -1555,4 +1567,188 @@ body.dark-theme {
     right: auto;
     z-index: 2000;
     margin-top: 0;
+}
+
+/* Map View Styling */
+.map-view {
+    width: 100%;
+    height: 70vh; /* Adjust as needed */
+    position: relative;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.map-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transform-origin: 0 0;
+}
+
+.map-view svg {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+}
+
+/* Map Interactivity */
+svg path {
+    fill: #B8C5D0 !important; /* Light grayish-blue for countries without recipes */
+    cursor: default;
+    transition: fill 0.3s, opacity 0.2s;
+    stroke: #ffffff !important;
+    stroke-width: 0.5;
+}
+
+/* Highlight countries with recipes */
+svg path.has-recipes {
+    fill: #E64A19 !important; /* Deep Orange for a premium, appetizing look */
+    cursor: pointer;
+}
+
+/* Dark mode specific for map */
+@media (prefers-color-scheme: dark) {
+    svg path {
+        fill: #333;
+        stroke: #1a1a1a;
+    }
+    svg path.has-recipes {
+        fill: #ffffff; /* White in dark mode */
+    }
+}
+
+/* Tooltip */
+.map-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+/* No Country Indicator */
+.no-country-indicator {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+    transition: transform 0.2s;
+}
+
+.no-country-indicator.has-recipes {
+    cursor: pointer;
+}
+
+.no-country-indicator.has-recipes:hover {
+    transform: scale(1.05);
+}
+
+.indicator-circle {
+    width: 70px;
+    height: 70px;
+    background-color: #B8C5D0; /* Match countries without recipes */
+    border: 2px solid #ffffff; /* White highlight like countries */
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem; /* Slightly smaller for 'Other' text */
+    font-weight: 700;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.no-country-indicator.has-recipes .indicator-circle {
+    background-color: #E64A19;
+    border-color: #ffffff; /* Keep white highlight */
+    color: #ffffff;
+}
+
+.indicator-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* Map Recipe List Modal */
+.map-recipe-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.map-list-item {
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.map-list-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
+}
+
+.map-list-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background-color: var(--bg-secondary);
+}
+
+.map-list-info {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.map-list-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.4;
+}
+
+.map-list-info .rating-stars {
+    color: #fbbf24; /* Amber-400 */
+    font-size: 1rem;
+}
+
+/* Toggle Button Styling */
+#map-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#map-toggle-btn.active {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
 }

@@ -2,7 +2,9 @@
 
 Apicius is a recipy app with the sole difference that everything is stored localy with a clean UI. In other words, it is an app made thinking about me for you :)
 
-<img src="/assets/Demo/Demo.gif?raw=true" alt="Demo" />
+<p align="center">
+  <img src="/assets/Demo/Demo.gif?raw=true" width="100%" alt="Demo" />
+</p>
 
 ## Quick Start
 

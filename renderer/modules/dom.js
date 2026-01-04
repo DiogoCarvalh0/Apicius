@@ -79,4 +79,10 @@ export const elements = {
     
     // Hero Section
     heroSection: document.querySelector('.hero-section'),
+    heroTitle: document.querySelector('.hero-section h1'),
+    searchContainer: document.querySelector('.search-container'),
+    searchBar: document.querySelector('.search-bar'),
+    mapView: document.getElementById('map-view'),
+    mapBackBtn: document.getElementById('map-back-btn'),
+    mapToggleBtn: document.getElementById('map-toggle-btn'),
 };

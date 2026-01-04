@@ -1,7 +1,7 @@
 import { elements } from './dom.js';
 import { state } from './state.js';
 import { loadRecipes } from './recipes.js';
-import { showGrid } from './navigation.js';
+import { showGrid, showDetail } from './navigation.js';
 
 export function initActions() {
     elements.backBtn.addEventListener('click', showGrid);
@@ -26,6 +26,15 @@ export function initActions() {
     window.addEventListener('click', (e) => {
         if (e.target === elements.deleteModal) {
             elements.deleteModal.classList.add('hidden');
+        }
+    });
+
+    // Handle map recipe click
+    document.addEventListener('open-recipe-detail', (e) => {
+        const recipeId = e.detail;
+        const recipe = state.recipes.find(r => r.id === recipeId);
+        if (recipe) {
+            showDetail(recipe);
         }
     });
 }

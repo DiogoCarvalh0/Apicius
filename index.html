@@ -19,6 +19,7 @@
             </div>
             <nav>
                 <div class="header-controls">
+                    <button id="map-toggle-btn" class="icon-btn" title="Toggle Map View">🌍</button>
                     <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
                     <button id="add-recipe-btn" class="primary-btn">+ Add Recipe</button>
                 </div>
@@ -107,6 +108,12 @@
 
             <div id="recipe-grid" class="recipe-grid">
                 <!-- Recipes will be injected here -->
+            </div>
+
+            <!-- Map View Container -->
+            <div id="map-view" class="map-view hidden">
+                <button id="map-back-btn" class="btn-pill">← Back to Recipes</button>
+                <!-- SVG Map and Controls will be injected here -->
             </div>
 
             <!-- Recipe Detail View -->
