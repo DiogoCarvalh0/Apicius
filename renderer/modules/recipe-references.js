@@ -30,27 +30,69 @@ export function detectRecipeReferences(text) {
 export function renderRecipeReferences(text) {
     if (!text) return '';
     
-    // Regex matches @ followed by letters, numbers, spaces, hyphens, underscores
-    // \p{L} matches any unicode letter (including accents)
-    // We modify it to NOT match if it's already part of a tag (simple heuristic)
-    // Actually, simpler is to just ensure we don't double wrap.
-    // But since we are replacing @Name, if it's inside >@Name< it's fine.
-    // If it's inside data-msg-id="@Name", that's bad.
+    // We search for '@' and then try to find the longest recipe title that matches from that point.
+    // This prevents the greedy regex from capturing trailing text that isn't part of the title.
     
-    // Safest approach: Only replace if NOT preceded by '>' or quotes? 
-    // Or assume text passed here is content, not raw HTML attributes?
-    // For now, let's just fix the character support.
+    // Sort recipes by title length descending to match longest titles first
+    const sortedRecipes = [...state.recipes].sort((a, b) => b.title.length - a.title.length);
     
-    return text.replace(/@([\p{L}\p{N}\s\-_]+)/gu, (match, name) => {
-        // If the match is part of an existing span's attribute or content we just created, we might have issues if we run this recursively or on HTML.
-        // A simple check: does the name correspond to a recipe?
-        const recipe = findRecipeByName(name.trim());
-        if (recipe) {
-            // Check if we are already inside a link? Hard with regex replace.
-            return `<span class="recipe-reference" data-msg-id="${recipe.id}">@${name}</span>`;
+    let result = text;
+    let offset = 0;
+    const atRegex = /@/g;
+    let match;
+    
+    // We use a temporary string to avoid double-processing or interfering with existing HTML
+    // However, since we are returning HTML, we need to be careful.
+    // The simplest way that handles the "nested" problem is to iterate through the string.
+    
+    const parts = [];
+    let lastIndex = 0;
+    
+    // Find all '@' symbols
+    while ((match = atRegex.exec(text)) !== null) {
+        const atIndex = match.index;
+        parts.push(text.substring(lastIndex, atIndex));
+        
+        const remainingText = text.substring(atIndex + 1);
+        let foundRecipe = null;
+        
+        for (const recipe of sortedRecipes) {
+            const title = recipe.title;
+            if (remainingText.toLowerCase().startsWith(title.toLowerCase())) {
+                // Found a match!
+                foundRecipe = recipe;
+                // Check if it's followed by a word character? 
+                // Usually recipe references are followed by space or punctuation.
+                // If the next char is a letter/number, it might be a partial match of a longer word.
+                // But since we sorted by length, if we match "Farofa" and the text is "Farofas", 
+                // we should probably ensure the word ends there.
+                
+                const nextCharIndex = title.length;
+                if (nextCharIndex < remainingText.length) {
+                    const nextChar = remainingText[nextCharIndex];
+                    if (/[\p{L}\p{N}]/u.test(nextChar)) {
+                        // It's part of a longer word that isn't a recipe
+                        continue;
+                    }
+                }
+                
+                break;
+            }
         }
-        return match;
-    });
+        
+        if (foundRecipe) {
+            const actualTitleMatch = remainingText.substring(0, foundRecipe.title.length);
+            parts.push(`<span class="recipe-reference" data-msg-id="${foundRecipe.id}">@${actualTitleMatch}</span>`);
+            lastIndex = atIndex + 1 + foundRecipe.title.length;
+            atRegex.lastIndex = lastIndex; // Skip ahead
+        } else {
+            parts.push('@');
+            lastIndex = atIndex + 1;
+        }
+    }
+    
+    parts.push(text.substring(lastIndex));
+    return parts.join('');
 }
 
 /**
@@ -62,6 +104,123 @@ export function findRecipeByName(name) {
     if (!name) return null;
     const searchName = name.toLowerCase();
     return state.recipes.find(r => r.title.toLowerCase() === searchName);
+}
+
+/**
+ * Replaces references to an old title with a new title in a string
+ * @param {string} text 
+ * @param {string} oldTitle 
+ * @param {string} newTitle 
+ * @returns {string} Updated text
+ */
+export function renameRecipeInText(text, oldTitle, newTitle) {
+    if (!text || !oldTitle || !newTitle) return text;
+    
+    const atRegex = /@/g;
+    let match;
+    const parts = [];
+    let lastIndex = 0;
+    
+    while ((match = atRegex.exec(text)) !== null) {
+        const atIndex = match.index;
+        parts.push(text.substring(lastIndex, atIndex));
+        
+        const remainingText = text.substring(atIndex + 1);
+        if (remainingText.toLowerCase().startsWith(oldTitle.toLowerCase())) {
+            // Check if it's a full word match (not followed by letter/number)
+            const nextCharIndex = oldTitle.length;
+            let isFullMatch = true;
+            if (nextCharIndex < remainingText.length) {
+                const nextChar = remainingText[nextCharIndex];
+                if (/[\p{L}\p{N}]/u.test(nextChar)) {
+                    isFullMatch = false;
+                }
+            }
+            
+            if (isFullMatch) {
+                parts.push('@' + newTitle);
+                lastIndex = atIndex + 1 + oldTitle.length;
+                atRegex.lastIndex = lastIndex;
+                continue;
+            }
+        }
+        
+        parts.push('@');
+        lastIndex = atIndex + 1;
+    }
+    
+    parts.push(text.substring(lastIndex));
+    return parts.join('');
+}
+
+/**
+ * Propagates a rename to all other recipes
+ * @param {Object} oldRecipe The recipe being renamed (containing the old title)
+ * @param {string} newTitle The new title
+ * @returns {Array<Object>} List of recipes that were modified
+ */
+export function propagateRename(oldRecipe, newTitle) {
+    const oldTitle = oldRecipe.title;
+    const modifiedRecipes = [];
+    
+    state.recipes.forEach(recipe => {
+        if (recipe.id === oldRecipe.id) return; // Skip the recipe itself
+        
+        let modified = false;
+        
+        // Update Instructions
+        if (Array.isArray(recipe.instructions)) {
+            recipe.instructions.forEach(section => {
+                // Section Title
+                if (section.title) {
+                    const newSectionTitle = renameRecipeInText(section.title, oldTitle, newTitle);
+                    if (newSectionTitle !== section.title) {
+                        section.title = newSectionTitle;
+                        modified = true;
+                    }
+                }
+                // Steps
+                if (Array.isArray(section.steps)) {
+                    section.steps = section.steps.map(step => {
+                        const newStep = renameRecipeInText(step, oldTitle, newTitle);
+                        if (newStep !== step) {
+                            modified = true;
+                            return newStep;
+                        }
+                        return step;
+                    });
+                }
+            });
+        }
+        
+        // Update Ingredients (Section Title)
+        if (Array.isArray(recipe.ingredients)) {
+            recipe.ingredients.forEach(section => {
+                if (section.title) {
+                    const newSectionTitle = renameRecipeInText(section.title, oldTitle, newTitle);
+                    if (newSectionTitle !== section.title) {
+                        section.title = newSectionTitle;
+                        modified = true;
+                    }
+                }
+            });
+        }
+        
+        // Update Notes
+        if (recipe.notes) {
+            const newNotes = renameRecipeInText(recipe.notes, oldTitle, newTitle);
+            if (newNotes !== recipe.notes) {
+                recipe.notes = newNotes;
+                modified = true;
+            }
+        }
+        
+        if (modified) {
+            modifiedRecipes.push(recipe);
+        }
+    });
+    
+    return modifiedRecipes;
 }
 
 // Autocomplete State

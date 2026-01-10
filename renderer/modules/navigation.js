@@ -85,8 +85,8 @@ export function showDetail(recipe) {
                 const li = document.createElement('li');
                 li.innerHTML = renderRecipeReferences(text);
                 li.onclick = (e) => {
-                    // Prevent toggling if clicking a reference link
-                    if (e.target.classList.contains('recipe-reference')) return;
+                    // Prevent toggling if clicking a reference link or any element inside it
+                    if (e.target.closest('.recipe-reference')) return;
                     li.classList.toggle('completed');
                     checkSectionCompletion(sectionDiv, ul);
                 };
@@ -111,8 +111,8 @@ export function showDetail(recipe) {
                 const li = document.createElement('li');
                 li.innerHTML = renderRecipeReferences(step);
                 li.onclick = (e) => {
-                    // Prevent toggling if clicking a reference link
-                    if (e.target.classList.contains('recipe-reference')) return;
+                    // Prevent toggling if clicking a reference link or any element inside it
+                    if (e.target.closest('.recipe-reference')) return;
                     li.classList.toggle('completed');
                     checkSectionCompletion(sectionDiv, ol);
                 };

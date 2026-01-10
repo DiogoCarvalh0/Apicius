@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { loadRecipes } from './recipes.js';
 import { showDetail } from './navigation.js';
 import { parseIngredient } from './utils.js';
-import { initRecipeReferenceAutocomplete } from './recipe-references.js';
+import { initRecipeReferenceAutocomplete, propagateRename } from './recipe-references.js';
 
 export function initForms() {
     // Add Button
@@ -56,7 +56,9 @@ export function initForms() {
             recipe.ingredients.forEach(section => {
                 const sectionEl = createSection('ingredient');
                 elements.ingredientsBuilder.appendChild(sectionEl);
-                sectionEl.querySelector('.section-title-input').value = section.title;
+                const titleInput = sectionEl.querySelector('.section-title-input');
+                titleInput.value = section.title;
+                initRecipeReferenceAutocomplete(titleInput); // Autocomplete for ingredient section title
                 const itemsContainer = sectionEl.querySelector('.builder-items');
                 itemsContainer.innerHTML = '';
                 section.items.forEach(item => {
@@ -117,6 +119,8 @@ export function initForms() {
                         <input type="text" class="clean-input item-input" value="${step}">
                         <button type="button" class="remove-item-btn" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>
                     `;
+                    const stepInput = row.querySelector('.item-input');
+                    initRecipeReferenceAutocomplete(stepInput);
                     row.querySelector('.remove-item-btn').addEventListener('click', () => row.remove());
                     itemsContainer.appendChild(row);
                 });
@@ -195,9 +199,23 @@ export function initForms() {
             }
         });
 
+        const editId = elements.addForm.dataset.editId;
+        const newTitle = elements.recipeTitle.value.trim();
+        
+        // Propagate rename if title changed
+        if (editId) {
+            const oldRecipe = state.recipes.find(r => r.id === editId);
+            if (oldRecipe && oldRecipe.title !== newTitle) {
+                const modifiedRecipes = propagateRename(oldRecipe, newTitle);
+                for (const recipe of modifiedRecipes) {
+                    await window.electronAPI.saveRecipe(recipe);
+                }
+            }
+        }
+
         const newRecipe = {
-            id: elements.addForm.dataset.editId || Date.now().toString(),
-            title: elements.recipeTitle.value.trim(),
+            id: editId || Date.now().toString(),
+            title: newTitle,
             description: elements.recipeDescription.value,
             yield: elements.recipeYield.value,
             activeTime: elements.recipeActiveTime.value,
