@@ -5,7 +5,6 @@ import { renderRecipes } from './view.js';
 
 export function initFilters() {
     elements.searchInput.addEventListener('input', filterRecipes);
-    elements.filterTimeCategory.addEventListener('change', filterRecipes);
 
     // Toggle Dropdown
     elements.filterTagsBtn.addEventListener('click', (e) => {
@@ -18,6 +17,14 @@ export function initFilters() {
         e.stopPropagation();
         elements.filterIngredientsDropdown.classList.toggle('active');
         elements.filterTagsDropdown.classList.remove('active');
+        elements.filterPurposeDropdown.classList.remove('active');
+    });
+
+    elements.filterPurposeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.filterPurposeDropdown.classList.toggle('active');
+        elements.filterTagsDropdown.classList.remove('active');
+        elements.filterIngredientsDropdown.classList.remove('active');
     });
 
     // Close dropdown when clicking outside
@@ -28,6 +35,9 @@ export function initFilters() {
         if (!elements.filterIngredientsDropdown.contains(e.target) && e.target !== elements.filterIngredientsBtn) {
             elements.filterIngredientsDropdown.classList.remove('active');
         }
+        if (!elements.filterPurposeDropdown.contains(e.target) && e.target !== elements.filterPurposeBtn) {
+            elements.filterPurposeDropdown.classList.remove('active');
+        }
     });
 
     // Keyboard Navigation for Filters
@@ -36,10 +46,10 @@ export function initFilters() {
 
     document.addEventListener('keydown', (e) => {
         // Only trigger if a dropdown is active
-        const tagsActive = elements.filterTagsDropdown.classList.contains('active');
         const ingredientsActive = elements.filterIngredientsDropdown.classList.contains('active');
+        const purposeActive = elements.filterPurposeDropdown.classList.contains('active');
 
-        if (!tagsActive && !ingredientsActive) return;
+        if (!tagsActive && !ingredientsActive && !purposeActive) return;
 
         // If user is searching in the main search bar, don't hijack keyboard? 
         // Actually, if dropdown is open, user intention is likely interaction with it.
@@ -56,8 +66,8 @@ export function initFilters() {
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
             searchBuffer += e.key.toLowerCase();
             
-            const activeList = tagsActive ? elements.filterTagsList : elements.filterIngredientsList;
-            const itemSelector = tagsActive ? '.tag-option' : '.tag-option'; 
+            const activeList = tagsActive ? elements.filterTagsList : (ingredientsActive ? elements.filterIngredientsList : elements.filterPurposeList);
+            const itemSelector = '.tag-option'; 
             
             const items = Array.from(activeList.querySelectorAll(itemSelector));
             
@@ -92,9 +102,6 @@ export function clearAllFilters() {
     // Reset Search
     elements.searchInput.value = '';
     
-    // Reset Time
-    elements.filterTimeCategory.value = '';
-    
     // Reset Rating
     setCurrentMinRating(0);
     const stars = elements.filterRatingStars.children;
@@ -114,6 +121,10 @@ export function clearAllFilters() {
     // Reset Ingredients
     document.querySelectorAll('.ingredient-checkbox').forEach(cb => cb.checked = false);
     updateFilterButtonText(elements.filterIngredientsBtn, 'Ingredients', '.ingredient-checkbox');
+
+    // Reset Purpose
+    document.querySelectorAll('.purpose-checkbox').forEach(cb => cb.checked = false);
+    updateFilterButtonText(elements.filterPurposeBtn, 'Purpose', '.purpose-checkbox');
 
     // Re-render
     filterRecipes();
@@ -199,6 +210,30 @@ export function populateIngredientsFilter() {
     });
 }
 
+export function populatePurposeFilter() {
+    const purposes = ["breakfast", "brunch", "appetizer", "main dish", "dessert", "snack"];
+
+    elements.filterPurposeList.innerHTML = '';
+    
+    purposes.forEach(purpose => {
+        const displayPurpose = purpose.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        
+        const div = document.createElement('div');
+        div.className = 'tag-option'; 
+        div.innerHTML = `
+            <label style="cursor:pointer; width:100%; display:flex; align-items:center;">
+                <input type="checkbox" value="${purpose}" class="purpose-checkbox">
+                ${displayPurpose}
+            </label>
+        `;
+        div.querySelector('input').addEventListener('change', () => {
+            updateFilterButtonText(elements.filterPurposeBtn, 'Purpose', '.purpose-checkbox');
+            filterRecipes();
+        });
+        elements.filterPurposeList.appendChild(div);
+    });
+}
+
 export function initRatingFilter() {
     elements.filterRatingStars.innerHTML = '';
     for (let i = 1; i <= 5; i++) {
@@ -273,11 +308,11 @@ function updateFilterButtonText(btn, defaultText, checkboxClass) {
 
 export function filterRecipes() {
     const query = elements.searchInput.value.toLowerCase();
-    const timeCategory = elements.filterTimeCategory.value;
     const minRating = state.currentMinRating;
     
     const selectedTags = Array.from(document.querySelectorAll('.tag-checkbox:checked')).map(cb => cb.value);
     const selectedIngredients = Array.from(document.querySelectorAll('.ingredient-checkbox:checked')).map(cb => cb.value);
+    const selectedPurposes = Array.from(document.querySelectorAll('.purpose-checkbox:checked')).map(cb => cb.value);
 
     const filtered = state.recipes.filter(recipe => {
         const matchesSearch = recipe.title.toLowerCase().includes(query);
@@ -301,19 +336,12 @@ export function filterRecipes() {
         }
         const matchesIngredients = selectedIngredients.length === 0 || selectedIngredients.every(ing => recipeIngredientItems.includes(ing));
 
-        let matchesTime = true;
-        if (timeCategory) {
-            const minutes = parseDuration(recipe.totalTime);
-            if (minutes === 0) matchesTime = false; 
-            else if (timeCategory === 'quick') matchesTime = minutes < 30;
-            else if (timeCategory === 'medium') matchesTime = minutes >= 30 && minutes <= 90;
-            else if (timeCategory === 'long') matchesTime = minutes > 90 && minutes <= 1440;
-            else if (timeCategory === 'multiday') matchesTime = minutes > 1440;
-        }
-
         const matchesRating = (recipe.rating || 0) >= minRating;
 
-        return matchesRating && matchesSearch && matchesTags && matchesIngredients && matchesTime;
+        const recipeGoals = recipe.goals || [];
+        const matchesPurpose = selectedPurposes.length === 0 || selectedPurposes.every(purpose => recipeGoals.includes(purpose));
+
+        return matchesRating && matchesSearch && matchesTags && matchesIngredients && matchesPurpose;
     });
 
     renderRecipes(filtered);
@@ -331,5 +359,11 @@ export function filterRecipes() {
         elements.filterIngredientsBtn.textContent = `Ingredients (${selectedIngredients.length})`;
     } else {
         elements.filterIngredientsBtn.textContent = 'Filter by Ingredients';
+    }
+
+    if (selectedPurposes.length > 0) {
+        elements.filterPurposeBtn.textContent = `Purpose (${selectedPurposes.length})`;
+    } else {
+        elements.filterPurposeBtn.textContent = 'Filter by Purpose';
     }
 }

@@ -22,6 +22,10 @@ export function initForms() {
         addIngredientSectionBtnHandler();
         addInstructionSectionBtnHandler();
         
+        // Reset goals
+        elements.recipeGoals.value = '';
+        elements.recipeGoalContainer.querySelectorAll('.goal-box').forEach(box => box.classList.remove('active'));
+        
         elements.addModal.classList.remove('hidden');
         
         // Reset scroll position
@@ -90,6 +94,7 @@ export function initForms() {
                     }
 
                     row.innerHTML = `
+                        <span class="drag-handle item-drag-handle">&#9776;</span>
                         <div class="ingredient-row">
                             <input type="text" class="clean-input quantity-input" placeholder="Qty" value="${quantity}">
                             <input type="text" class="clean-input name-input" placeholder="Ingredient" value="${name}">
@@ -116,6 +121,7 @@ export function initForms() {
                     const row = document.createElement('div');
                     row.className = 'builder-item-row';
                     row.innerHTML = `
+                        <span class="drag-handle item-drag-handle">&#9776;</span>
                         <input type="text" class="clean-input item-input" value="${step}">
                         <button type="button" class="remove-item-btn" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>
                     `;
@@ -129,6 +135,17 @@ export function initForms() {
 
         elements.addForm.dataset.editId = recipe.id;
         elements.addForm.dataset.existingImage = recipe.image;
+        
+        // Populate Goals
+        const goals = recipe.goals || [];
+        elements.recipeGoals.value = goals.join(',');
+        elements.recipeGoalContainer.querySelectorAll('.goal-box').forEach(box => {
+            if (goals.includes(box.dataset.value)) {
+                box.classList.add('active');
+            } else {
+                box.classList.remove('active');
+            }
+        });
         
         document.querySelector('#add-modal h2').textContent = 'Edit Recipe';
         elements.addModal.classList.remove('hidden');
@@ -229,7 +246,8 @@ export function initForms() {
             labels: elements.recipeLabels.value.split(',').map(s => s.trim()).filter(s => s),
             image: imagePath,
             meal: elements.recipeMeal.value,
-            type: elements.recipeType.value
+            type: elements.recipeType.value,
+            goals: elements.recipeGoals.value ? elements.recipeGoals.value.split(',') : []
         };
 
         await window.electronAPI.saveRecipe(newRecipe);
@@ -250,6 +268,7 @@ export function initForms() {
     initRatingInput();
     initRichTextEditor();
     initTagAutocomplete();
+    initGoalSelector();
     
     // Notes Editor Autocomplete
     initRecipeReferenceAutocomplete(elements.recipeNotesEditor); // This works because contenteditable emits input events too
@@ -286,12 +305,21 @@ function createSection(type) {
     const itemsContainer = div.querySelector('.builder-items');
     const addItemBtn = div.querySelector('.add-item-btn');
     
+    if (window.Sortable) {
+        new window.Sortable(itemsContainer, {
+            handle: '.item-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost'
+        });
+    }
+
     const addItem = () => {
         const row = document.createElement('div');
         row.className = 'builder-item-row';
         
         if (type === 'ingredient') {
             row.innerHTML = `
+                <span class="drag-handle item-drag-handle">&#9776;</span>
                 <div class="ingredient-row">
                     <input type="text" class="clean-input quantity-input" placeholder="Qty">
                     <input type="text" class="clean-input name-input" placeholder="Ingredient">
@@ -301,6 +329,7 @@ function createSection(type) {
             initIngredientAutocomplete(row.querySelector('.name-input'));
         } else {
             row.innerHTML = `
+                <span class="drag-handle item-drag-handle">&#9776;</span>
                 <input type="text" class="clean-input item-input" placeholder="Step description">
                 <button type="button" class="remove-btn remove-item-btn">&times;</button>
             `;
@@ -694,5 +723,21 @@ function initIngredientAutocomplete(inputElement) {
         if (e.target !== inputElement && e.target !== dropdown && !dropdown.contains(e.target)) {
             closeAutocomplete();
         }
+    });
+}
+
+function initGoalSelector() {
+    const container = elements.recipeGoalContainer;
+    const hiddenInput = elements.recipeGoals;
+    
+    container.querySelectorAll('.goal-box').forEach(box => {
+        box.addEventListener('click', () => {
+            box.classList.toggle('active');
+            
+            const activeValues = Array.from(container.querySelectorAll('.goal-box.active'))
+                .map(b => b.dataset.value);
+            
+            hiddenInput.value = activeValues.join(',');
+        });
     });
 }

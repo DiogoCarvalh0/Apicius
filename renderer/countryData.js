@@ -55,8 +55,8 @@ export const countryMapping = {
     // Asia
     'china': 'CN', 'chinese': 'CN', 'hong kong': 'HK', 'macau': 'MO',
     'japan': 'JP', 'japanese': 'JP',
-    'korea': 'KR', 'south korea': 'KR', 'korean': 'KR',
-    'north korea': 'KP',
+    'korea': 'KR', 'south korea': 'KR', 'korean': 'KR', 'south korean': 'KR',
+    'north korea': 'KP', 'north korean': 'KP',
     'india': 'IN', 'indian': 'IN',
     'thailand': 'TH', 'thai': 'TH',
     'vietnam': 'VN', 'vietnamese': 'VN',

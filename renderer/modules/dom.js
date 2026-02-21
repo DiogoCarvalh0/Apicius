@@ -53,6 +53,8 @@ export const elements = {
     ratingContainer: document.querySelector('.rating-input'),
     tagAutocompleteDropdown: document.getElementById('tag-autocomplete-dropdown'),
     recipeReferenceDropdown: document.getElementById('recipe-reference-dropdown'),
+    recipeGoalContainer: document.getElementById('recipe-goal-container'),
+    recipeGoals: document.getElementById('recipe-goals'),
 
 
     // Filter Elements
@@ -62,11 +64,13 @@ export const elements = {
     filterIngredientsBtn: document.getElementById('filter-ingredients-btn'),
     filterIngredientsDropdown: document.getElementById('filter-ingredients-dropdown'),
     filterIngredientsList: document.getElementById('filter-ingredients-list'),
-    filterTimeCategory: document.getElementById('filter-time-category'),
     filterRatingStars: document.getElementById('filter-rating-stars'),
     filterRatingValueDisplay: document.getElementById('filter-rating-value'),
     filterRatingValueDisplay: document.getElementById('filter-rating-value'),
     clearRatingFilterBtn: document.getElementById('clear-rating-filter'),
+    filterPurposeBtn: document.getElementById('filter-purpose-btn'),
+    filterPurposeDropdown: document.getElementById('filter-purpose-dropdown'),
+    filterPurposeList: document.getElementById('filter-purpose-list'),
     clearAllFiltersBtn: document.getElementById('clear-all-filters-btn'),
 
     // Settings Elements

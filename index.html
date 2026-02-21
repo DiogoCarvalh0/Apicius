@@ -67,6 +67,14 @@
                         <input type="text" id="search-input" placeholder="Search recipes...">
                     </div>
                     <div class="filters">
+                        <!-- Custom Multi-select for Recipe Purpose -->
+                        <div class="custom-dropdown" id="filter-purpose-dropdown">
+                            <button class="dropdown-btn" id="filter-purpose-btn">Filter by Purpose</button>
+                            <div class="dropdown-content" id="filter-purpose-list">
+                                <!-- Options injected here -->
+                            </div>
+                        </div>
+
                         <!-- Custom Multi-select for Tags -->
                         <div class="custom-dropdown" id="filter-tags-dropdown">
                             <button class="dropdown-btn" id="filter-tags-btn">Filter by Tags</button>
@@ -82,15 +90,6 @@
                                 <!-- Checkboxes injected here -->
                             </div>
                         </div>
-
-                        <!-- Time Category Filter -->
-                        <select id="filter-time-category">
-                            <option value="">Any Time</option>
-                            <option value="quick">Quick (< 30m)</option>
-                            <option value="medium">Medium (30m - 1.5h)</option>
-                            <option value="long">Long (1.5h - 24h)</option>
-                            <option value="multiday">Multi-day (> 24h)</option>
-                        </select>
 
                         <!-- Visual Rating Filter -->
                         <div class="rating-filter-container" id="rating-filter-container">
@@ -274,6 +273,19 @@
                         </div>
                     </div>
     
+                    <div class="form-group">
+                        <label>Recipe Goal</label>
+                        <div id="recipe-goal-container" class="goal-selector">
+                            <div class="goal-box" data-value="breakfast">Breakfast</div>
+                            <div class="goal-box" data-value="brunch">Brunch</div>
+                            <div class="goal-box" data-value="appetizer">Appetizer</div>
+                            <div class="goal-box" data-value="main dish">Main Dish</div>
+                            <div class="goal-box" data-value="dessert">Dessert</div>
+                            <div class="goal-box" data-value="snack">Snack</div>
+                        </div>
+                        <input type="hidden" id="recipe-goals">
+                    </div>
+    
                     <!-- Recipe Reference Autocomplete Dropdown (Dynamic Positioning) -->
                     <div id="recipe-reference-dropdown" class="autocomplete-dropdown hidden"></div>
     
@@ -306,6 +318,8 @@
         </div>
     </div>
 
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script type="module" src="renderer/main.js"></script>
 </body>
 </html>
