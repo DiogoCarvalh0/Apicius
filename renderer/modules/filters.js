@@ -211,7 +211,7 @@ export function populateIngredientsFilter() {
 }
 
 export function populatePurposeFilter() {
-    const purposes = ["breakfast", "brunch", "appetizer", "main dish", "dessert", "snack", "bread/pastries"];
+    const purposes = ["breakfast", "brunch", "appetizer", "main dish", "side dish", "dessert", "snack", "bread/pastries"];
 
     elements.filterPurposeList.innerHTML = '';
     
