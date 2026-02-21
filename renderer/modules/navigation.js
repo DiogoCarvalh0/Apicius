@@ -27,7 +27,7 @@ export function showDetail(recipe) {
     
     // Labels
     elements.detailLabels.innerHTML = '';
-    const allLabels = [recipe.meal, recipe.type, ...(recipe.labels || [])].filter(l => l);
+    const allLabels = [recipe.meal, recipe.type, ...(recipe.goals || []), ...(recipe.labels || [])].filter(l => l);
     allLabels.forEach(label => {
         const span = document.createElement('span');
         span.className = 'hero-label';
