@@ -34,21 +34,6 @@ docker run -d \
 
 Then open **http://localhost:3000** (or replace `localhost` with your NAS/server IP).
 
-## Project Structure
-
-```
-apicius/
-├── server.js          # Express API server
-├── index.html         # App shell
-├── styles.css         # Global styles
-├── renderer/          # Frontend JavaScript
-│   ├── main.js        # Entry point & history navigation
-│   ├── mapController.js
-│   └── modules/       # Filters, forms, i18n, navigation…
-├── assets/            # Static assets (images, world map SVG)
-└── database/          # Local JSON recipe database (git-ignored)
-```
-
 ## Fun Fact
 
 [Apicius cookbook](https://www.gutenberg.org/files/29728/29728-h/29728-h.htm)  is the oldest recipe cookbook that we still have the recipies for. Might be a good place for you to get inspiration from.
