@@ -1048,6 +1048,7 @@ input[type="file"] {
     padding: 10px;
     max-height: 300px;
     overflow-y: auto;
+    margin-top: 4px;
 }
 
 .custom-dropdown.active .dropdown-content {
@@ -1391,13 +1392,14 @@ body.dark-theme {
     background-color: rgba(0, 0, 0, 0.05);
     color: var(--accent-color);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     font-size: 1.1rem;
-    line-height: 1;
+    line-height: 0;
     transition: all 0.2s;
     flex-shrink: 0;
+    padding: 0;
+    padding-bottom: 1px; /* Optical adjustment for the × character */
 }
 
 .remove-btn:hover {
@@ -1557,9 +1559,9 @@ body.dark-theme {
     border-radius: 0 0 8px 8px;
     max-height: 200px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 4000;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin-top: -8px; /* Overlap with input border-radius */
+    margin-top: 4px; /* Space between input and dropdown */
 }
 
 .autocomplete-dropdown.hidden {
@@ -1611,7 +1613,7 @@ body.dark-theme {
     position: absolute;
     right: auto;
     z-index: 2000;
-    margin-top: 0;
+    margin-top: 4px;
 }
 
 /* Map View Styling */

@@ -111,7 +111,8 @@ async function translateRecipe(recipe, targetLang) {
         }
     }
 
-    addText('title', recipe.title);
+    // Title is no longer translated as per user request
+    // addText('title', recipe.title);
     addText('description', recipe.description);
     addText('yield', recipe.yield);
     addText('activeTime', recipe.activeTime);
@@ -237,26 +238,35 @@ app.post('/api/recipes', async (req, res) => {
     if (index !== -1) {
       // Update existing
       const oldRecipe = recipes[index];
-      // If image changed and old image exists, delete old image
-      if (oldRecipe.image && recipe.image && oldRecipe.image !== recipe.image) {
-        // extract filename from 'images/...'
-        const oldImageName = oldRecipe.image.replace('images/', '');
-        const oldImagePath = path.join(imagesDir, oldImageName);
-        if (fs.existsSync(oldImagePath)) {
-          try {
-            fs.unlinkSync(oldImagePath);
-          } catch (err) {
-            console.error('Failed to delete old image:', err);
+      
+      // If image changed or was removed, and old image exists, check if it's still needed
+      if (oldRecipe.image && oldRecipe.image !== recipe.image) {
+        const isImageUsedElsewhere = recipes.some((r, idx) => idx !== index && r.image === oldRecipe.image);
+        
+        if (!isImageUsedElsewhere) {
+          // extract filename safely
+          const oldImageName = oldRecipe.image.includes('/') ? oldRecipe.image.split('/').pop() : oldRecipe.image;
+          const oldImagePath = path.join(imagesDir, oldImageName);
+          
+          if (fs.existsSync(oldImagePath)) {
+            try {
+              fs.unlinkSync(oldImagePath);
+              console.log(`Deleted unused image: ${oldImageName}`);
+            } catch (err) {
+              console.error('Failed to delete old image:', err);
+            }
           }
-        }
-        // Also delete old thumbnail
-        const oldThumbName = `${path.parse(oldImageName).name}.webp`;
-        const oldThumbPath = path.join(thumbsDir, oldThumbName);
-        if (fs.existsSync(oldThumbPath)) {
-          try {
-            fs.unlinkSync(oldThumbPath);
-          } catch (err) {
-            console.error('Failed to delete old thumbnail:', err);
+          
+          // Also delete old thumbnail
+          const oldThumbName = `${path.parse(oldImageName).name}.webp`;
+          const oldThumbPath = path.join(thumbsDir, oldThumbName);
+          if (fs.existsSync(oldThumbPath)) {
+            try {
+              fs.unlinkSync(oldThumbPath);
+              console.log(`Deleted unused thumbnail: ${oldThumbName}`);
+            } catch (err) {
+              console.error('Failed to delete old thumbnail:', err);
+            }
           }
         }
       }

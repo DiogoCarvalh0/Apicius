@@ -308,6 +308,19 @@ export function initForms() {
     
     // Notes Editor Autocomplete
     initRecipeReferenceAutocomplete(elements.recipeNotesEditor); // This works because contenteditable emits input events too
+
+    // Global click listener to close all autocomplete dropdowns
+    document.addEventListener('click', (e) => {
+        // Close ingredient autocompletes
+        document.querySelectorAll('.autocomplete-dropdown:not(.hidden)').forEach(dropdown => {
+            // Find the input that owns this dropdown
+            const inputId = dropdown.id;
+            const input = document.querySelector(`[data-dropdown-id="${inputId}"]`);
+            if (input && e.target !== input && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    });
 }
 
 function addIngredientSectionBtnHandler() {
@@ -724,7 +737,7 @@ function initIngredientAutocomplete(inputElement) {
         // Position Dropdown
         const rect = inputElement.getBoundingClientRect();
         dropdown.style.position = 'fixed';
-        dropdown.style.top = (rect.bottom) + 'px';
+        dropdown.style.top = `${rect.bottom}px`;
         dropdown.style.left = (rect.left) + 'px';
         dropdown.style.width = rect.width + 'px';
         
@@ -768,13 +781,6 @@ function initIngredientAutocomplete(inputElement) {
             items[currentFocus].scrollIntoView({ block: 'nearest' });
         }
     }
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (e.target !== inputElement && e.target !== dropdown && !dropdown.contains(e.target)) {
-            closeAutocomplete();
-        }
-    });
 }
 
 function initGoalSelector() {
