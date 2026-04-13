@@ -66,7 +66,6 @@ export const elements = {
     filterIngredientsList: document.getElementById('filter-ingredients-list'),
     filterRatingStars: document.getElementById('filter-rating-stars'),
     filterRatingValueDisplay: document.getElementById('filter-rating-value'),
-    filterRatingValueDisplay: document.getElementById('filter-rating-value'),
     clearRatingFilterBtn: document.getElementById('clear-rating-filter'),
     filterPurposeBtn: document.getElementById('filter-purpose-btn'),
     filterPurposeDropdown: document.getElementById('filter-purpose-dropdown'),
@@ -82,6 +81,7 @@ export const elements = {
     changeFolderBtn: document.getElementById('change-folder-btn'),
     
     // Hero Section
+    logo: document.querySelector('.logo'),
     heroSection: document.querySelector('.hero-section'),
     heroTitle: document.querySelector('.hero-section h1'),
     searchContainer: document.querySelector('.search-container'),

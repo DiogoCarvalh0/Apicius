@@ -93,15 +93,37 @@ export function initForms() {
                         }
                     }
 
-                    row.innerHTML = `
-                        <span class="drag-handle item-drag-handle">&#9776;</span>
-                        <div class="ingredient-row">
-                            <input type="text" class="clean-input quantity-input" placeholder="Qty" value="${quantity}">
-                            <input type="text" class="clean-input name-input" placeholder="Ingredient" value="${name}">
-                        </div>
-                        <button type="button" class="remove-btn remove-item-btn">&times;</button>
-                    `;
-                    row.querySelector('.remove-item-btn').addEventListener('click', () => row.remove());
+                    const dragHandle = document.createElement('span');
+                    dragHandle.className = 'drag-handle item-drag-handle';
+                    dragHandle.innerHTML = '&#9776;';
+
+                    const ingredientRow = document.createElement('div');
+                    ingredientRow.className = 'ingredient-row';
+
+                    const qtyInput = document.createElement('input');
+                    qtyInput.type = 'text';
+                    qtyInput.className = 'clean-input quantity-input';
+                    qtyInput.placeholder = 'Qty';
+                    qtyInput.value = quantity;
+
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'text';
+                    nameInput.className = 'clean-input name-input';
+                    nameInput.placeholder = 'Ingredient';
+                    nameInput.value = name;
+
+                    ingredientRow.appendChild(qtyInput);
+                    ingredientRow.appendChild(nameInput);
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'remove-btn remove-item-btn';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.addEventListener('click', () => row.remove());
+
+                    row.appendChild(dragHandle);
+                    row.appendChild(ingredientRow);
+                    row.appendChild(removeBtn);
                     itemsContainer.appendChild(row);
                 });
             });
@@ -120,14 +142,28 @@ export function initForms() {
                 section.steps.forEach(step => {
                     const row = document.createElement('div');
                     row.className = 'builder-item-row';
-                    row.innerHTML = `
-                        <span class="drag-handle item-drag-handle">&#9776;</span>
-                        <input type="text" class="clean-input item-input" value="${step}">
-                        <button type="button" class="remove-item-btn" style="color:red; border:none; background:none; cursor:pointer;">&times;</button>
-                    `;
-                    const stepInput = row.querySelector('.item-input');
+
+                    const dragHandle = document.createElement('span');
+                    dragHandle.className = 'drag-handle item-drag-handle';
+                    dragHandle.innerHTML = '&#9776;';
+
+                    const stepInput = document.createElement('input');
+                    stepInput.type = 'text';
+                    stepInput.className = 'clean-input item-input';
+                    stepInput.value = step;
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'remove-item-btn';
+                    removeBtn.style.cssText = 'color:red; border:none; background:none; cursor:pointer;';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.addEventListener('click', () => row.remove());
+
+                    row.appendChild(dragHandle);
+                    row.appendChild(stepInput);
+                    row.appendChild(removeBtn);
+
                     initRecipeReferenceAutocomplete(stepInput);
-                    row.querySelector('.remove-item-btn').addEventListener('click', () => row.remove());
                     itemsContainer.appendChild(row);
                 });
             });
@@ -231,7 +267,7 @@ export function initForms() {
         }
 
         const newRecipe = {
-            id: editId || Date.now().toString(),
+            id: editId || crypto.randomUUID(),
             title: newTitle,
             description: elements.recipeDescription.value,
             yield: elements.recipeYield.value,
@@ -300,7 +336,14 @@ function createSection(type) {
         <button type="button" class="btn-secondary btn-small add-item-btn">+ Add ${type === 'ingredient' ? 'Ingredient' : 'Step'}</button>
     `;
 
-    div.querySelector('.remove-section-btn').addEventListener('click', () => div.remove());
+    div.querySelector('.remove-section-btn').addEventListener('click', () => {
+        // Clean up orphan autocomplete dropdowns
+        div.querySelectorAll('[data-dropdown-id]').forEach(input => {
+            const dd = document.getElementById(input.dataset.dropdownId);
+            if (dd) dd.remove();
+        });
+        div.remove();
+    });
 
     const itemsContainer = div.querySelector('.builder-items');
     const addItemBtn = div.querySelector('.add-item-btn');
@@ -336,7 +379,15 @@ function createSection(type) {
             initRecipeReferenceAutocomplete(row.querySelector('.item-input'));
         }
 
-        row.querySelector('.remove-item-btn').addEventListener('click', () => row.remove());
+        row.querySelector('.remove-item-btn').addEventListener('click', () => {
+            // Clean up orphan autocomplete dropdown
+            const nameInput = row.querySelector('[data-dropdown-id]');
+            if (nameInput) {
+                const dd = document.getElementById(nameInput.dataset.dropdownId);
+                if (dd) dd.remove();
+            }
+            row.remove();
+        });
         itemsContainer.appendChild(row);
     };
 

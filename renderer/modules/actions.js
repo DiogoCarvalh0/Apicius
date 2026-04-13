@@ -4,7 +4,10 @@ import { loadRecipes } from './recipes.js';
 import { showGrid, showDetail } from './navigation.js';
 
 export function initActions() {
-    elements.backBtn.addEventListener('click', showGrid);
+    elements.backBtn.addEventListener('click', () => history.back());
+    if (elements.logo) {
+        elements.logo.addEventListener('click', showGrid);
+    }
 
     elements.deleteBtn.addEventListener('click', () => {
         elements.deleteModal.classList.remove('hidden');
@@ -16,10 +19,15 @@ export function initActions() {
 
     elements.confirmDeleteBtn.addEventListener('click', async () => {
         if (state.currentRecipeId) {
-            await window.electronAPI.deleteRecipe(state.currentRecipeId);
-            elements.deleteModal.classList.add('hidden');
-            showGrid();
-            loadRecipes();
+            try {
+                await window.electronAPI.deleteRecipe(state.currentRecipeId);
+                elements.deleteModal.classList.add('hidden');
+                showGrid();
+                loadRecipes();
+            } catch (err) {
+                console.error('Failed to delete recipe:', err);
+                elements.deleteModal.classList.add('hidden');
+            }
         }
     });
 

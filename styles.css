@@ -6,6 +6,7 @@
     --accent-color: #333333;
     --border-color: #e0e0e0;
     --font-family: 'Inter', sans-serif;
+    --font-title: 'Outfit', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -58,6 +59,10 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+h1, h2, h3, h4, h5, h6, .stat-label, .section-title, .detail-meta-top {
+    font-family: var(--font-title);
+}
+
 .app-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -83,6 +88,7 @@ header {
     display: flex;
     align-items: center;
     gap: 12px;
+    cursor: pointer;
 }
 
 .logo-image {
@@ -184,6 +190,7 @@ h1 {
     box-sizing: border-box; /* Include border/padding in height */
     display: flex;
     align-items: center;
+    justify-content: flex-start;
 }
 
 select {
@@ -248,7 +255,7 @@ select {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 3000;
     opacity: 1;
     transition: opacity 0.3s;
 }
@@ -268,6 +275,7 @@ select {
     position: relative;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
+
 
 .close-modal {
     position: absolute;
@@ -468,6 +476,13 @@ textarea.clean-input {
     list-style-type: disc;
 }
 
+/* Strip inline styles from copy-pasted rich text in notes to prevent dark-mode issues */
+#detail-notes *:not(.recipe-reference),
+.rich-editor *:not(.recipe-reference) {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
 /* File Input */
 input[type="file"] {
     border: none;
@@ -491,19 +506,6 @@ input[type="file"] {
 
 .btn-text:hover {
     text-decoration: underline;
-}
-
-.detail-hero {
-    text-align: center;
-    margin-bottom: 60px;
-}
-
-#detail-image {
-    width: 100%;
-    max-height: 500px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 30px;
 }
 
 .detail-header {
@@ -835,10 +837,33 @@ input[type="file"] {
     height: 400px;
 }
 
+.hero-image-wrapper.shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: linear-gradient(90deg, var(--card-bg) 25%, color-mix(in srgb, var(--card-bg), white 8%) 50%, var(--card-bg) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 #detail-image {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+#detail-image.loading {
+    visibility: hidden;
 }
 
 .hero-overlay {
@@ -978,6 +1003,7 @@ input[type="file"] {
 .custom-dropdown {
     position: relative;
     display: inline-block;
+    width: 185px;
 }
 
 .dropdown-btn {
@@ -988,15 +1014,33 @@ input[type="file"] {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
-    min-width: 150px;
+    width: 100%;
     text-align: left;
 }
+
+.dropdown-btn::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(2px) rotate(-135deg);
+    margin-left: auto;
+    opacity: 0.6;
+    transition: transform 0.3s ease;
+}
+
+.custom-dropdown.active .dropdown-btn::after {
+    transform: translateY(-2px) rotate(45deg);
+}
+
 
 .dropdown-content {
     display: none;
     position: absolute;
     background-color: var(--card-bg);
-    min-width: 200px;
+    width: 100%;
+    box-sizing: border-box;
     box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     z-index: 1000;
     border: 1px solid var(--border-color);
@@ -1060,25 +1104,25 @@ input[type="file"] {
 
 /* Settings Modal */
 .settings-content {
-    max-width: 380px; 
+    max-width: 280px; 
     padding: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-radius: 12px; /* Smoother radius */
+    border-radius: 12px;
 }
 
 .settings-content .modal-header {
-    padding: 20px 24px;
+    padding: 12px 20px;
     border-bottom: 1px solid rgba(0,0,0,0.05); /* Faint border */
 }
 
 .settings-content .modal-body {
-    padding: 24px;
+    padding: 16px 20px;
 }
 
 .setting-group {
-    margin-bottom: 24px;
+    margin-bottom: 8px;
     padding-bottom: 0; /* Remove divider padding */
     border-bottom: none; /* Remove dividers between groups */
 }
@@ -1426,6 +1470,7 @@ body.dark-theme {
     padding: 6px 12px;
     border-radius: 8px;
     height: 44px; /* Match other inputs */
+    width: 185px;
 }
 
 .star-rating-input {
@@ -1579,6 +1624,7 @@ body.dark-theme {
     padding: 20px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     overflow: hidden;
+    touch-action: none; /* Disable native browser page pan/zoom over the map */
 }
 
 .map-wrapper {
@@ -1615,13 +1661,19 @@ svg path.has-recipes {
 /* Dark mode specific for map */
 @media (prefers-color-scheme: dark) {
     svg path {
-        fill: #333;
-        stroke: #1a1a1a;
+        fill: #333 !important;
+        stroke: #1a1a1a !important;
     }
-    svg path.has-recipes {
-        fill: #ffffff; /* White in dark mode */
-    }
+
 }
+
+/* Explicit dark theme class - map colors */
+body.dark-theme svg path {
+    fill: #333 !important;
+    stroke: #1a1a1a !important;
+}
+
+
 
 /* Tooltip */
 .map-tooltip {
@@ -1667,8 +1719,12 @@ svg path.has-recipes {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem; /* Slightly smaller for 'Other' text */
+    flex-direction: column;
+    text-align: center;
+    line-height: 1.1;
+    font-size: 0.85rem;
     font-weight: 700;
+    padding: 2px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
@@ -1810,4 +1866,138 @@ svg path.has-recipes {
     color: var(--bg-color);
     border-color: var(--primary-color);
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    /* Header adjustments */
+    header {
+        padding: 15px 0 10px 0;
+        margin-bottom: 20px;
+        z-index: 2000; /* Ensure header stays above map which uses transform */
+    }
+    
+    .logo-text {
+        font-size: 1.2rem;
+    }
+    
+    /* Search and Filters */
+    .search-container {
+        gap: 15px;
+    }
+    
+    .filters {
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .filters > * {
+        /* Let filter buttons wrap naturally like pills rather than full width */
+        width: auto;
+        flex: 1 1 calc(50% - 10px);
+        min-width: 140px;
+        max-width: none;
+    }
+    
+    #clear-all-filters-btn {
+        flex: 1 1 100%;
+    }
+    
+    .search-bar {
+        width: 100%;
+        max-width: none;
+    }
+    
+    /* Grid */
+    .recipe-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 20px;
+    }
+    
+    .card-title {
+        font-size: 0.95rem;
+    }
+    
+    /* Detail View */
+    .detail-content {
+        grid-template-columns: 1fr; /* Stack columns on mobile */
+        gap: 30px;
+    }
+    
+    #detail-title {
+        font-size: 2rem;
+    }
+    
+    .detail-stats {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .stat-item {
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .detail-actions {
+        /* Override absolute positioning so buttons don't overlap the image */
+        position: relative;
+        flex-direction: row;
+        justify-content: flex-end;
+        margin-bottom: 15px;
+        gap: 10px;
+    }
+    
+    .detail-actions button {
+        width: auto;
+        flex: 1;
+        padding: 10px 0;
+    }
+    
+    /* Map View */
+    .map-view {
+        height: 60vh;
+        padding: 10px;
+        border-radius: 8px;
+    }
+    
+    /* Modals */
+    .modal-content {
+        padding: 20px;
+        margin: 10px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-content.large-modal {
+        padding: 0;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .modal-body {
+        padding: 15px 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .ingredient-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .ingredient-row .quantity-input {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
 

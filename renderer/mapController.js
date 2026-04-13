@@ -1,15 +1,16 @@
 import { getCountryIdFromTag, getAdjectiveFromId } from './countryData.js';
 import { elements } from './modules/dom.js';
+import { t, currentLang } from './modules/i18n.js';
 
 export const MapController = {
     mapContainer: null,
     svgElement: null,
     mapWrapper: null,
     currentRecipes: [],
+    mapLoaded: false,
     
     init() {
         this.mapContainer = document.getElementById('map-view');
-        this.loadMap();
         this.setupNavigation();
         
         document.addEventListener('recipes-updated', (e) => {
@@ -18,8 +19,11 @@ export const MapController = {
         
         // Also listen for request-map-update (from toggle)
         document.addEventListener('request-map-update', () => {
-             // We can re-render if needed, or just rely on cached data.
-             // If we have currentRecipes, just ensure view is correct.
+             // Lazy-load the map on first use
+             if (!this.mapLoaded) {
+                 this.loadMap();
+                 this.mapLoaded = true;
+             }
              if (this.currentRecipes.length > 0) {
                  this.updateMapData(this.currentRecipes);
              }
@@ -56,7 +60,7 @@ export const MapController = {
             noCountryBtn.title = 'Recipes without a specific country';
             noCountryBtn.innerHTML = `
                 <div class="indicator-circle">
-                    <span>Other</span>
+                    <span data-i18n="otherCountry">${t('otherCountry')}</span>
                 </div>
             `;
             noCountryBtn.addEventListener('click', () => {
@@ -197,6 +201,98 @@ export const MapController = {
              this.mapContainer.style.cursor = '';
         });
 
+        // Touch events for Mobile Zoom and Pan
+        let initialPinchDistance = null;
+        let initialScale = 1;
+        
+        this.mapContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Pinch zoom start
+                e.preventDefault();
+                initialPinchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                initialScale = scale;
+                pPanning = false;
+            } else if (e.touches.length === 1) {
+                // Pan start
+                start = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY };
+                pPanning = true;
+            }
+        }, { passive: false });
+
+        this.mapContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                // Pinch zoom move
+                e.preventDefault();
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                
+                const newScale = Math.min(Math.max(1, initialScale * (currentDistance / initialPinchDistance)), 8);
+                
+                if (newScale !== scale) {
+                    const xs = (centerX - pointX) / scale;
+                    const ys = (centerY - pointY) / scale;
+                    
+                    scale = newScale;
+                    
+                    pointX = centerX - xs * scale;
+                    pointY = centerY - ys * scale;
+                    
+                    // Re-clamp bounds
+                    const mapRect = this.mapContainer.getBoundingClientRect();
+                    const currentSvgWidth = mapRect.width * scale;
+                    const currentSvgHeight = mapRect.height * scale;
+                    
+                    const minX = Math.min(0, mapRect.width - currentSvgWidth);
+                    const maxX = 0;
+                    const minY = Math.min(0, mapRect.height - currentSvgHeight);
+                    const maxY = 0;
+                    
+                    pointX = Math.max(minX, Math.min(maxX, pointX));
+                    pointY = Math.max(minY, Math.min(maxY, pointY));
+                    
+                    setTransform();
+                }
+            } else if (e.touches.length === 1 && pPanning) {
+                // Pan move
+                e.preventDefault(); // Prevents page scrolling over map wrapper
+                const newPointX = e.touches[0].clientX - start.x;
+                const newPointY = e.touches[0].clientY - start.y;
+                
+                // Allow panning only if zoomed in
+                const mapRect = this.mapContainer.getBoundingClientRect();
+                const svgRect = this.svgElement.getBoundingClientRect();
+                const svgWidth = svgRect.width;
+                const svgHeight = svgRect.height;
+                
+                const minX = Math.min(0, mapRect.width - svgWidth);
+                const maxX = 0;
+                const minY = Math.min(0, mapRect.height - svgHeight);
+                const maxY = 0;
+                
+                pointX = Math.max(minX, Math.min(maxX, newPointX));
+                pointY = Math.max(minY, Math.min(maxY, newPointY));
+                
+                setTransform();
+            }
+        }, { passive: false });
+
+        this.mapContainer.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+            if (e.touches.length === 0) {
+                pPanning = false;
+            }
+        });
+
         // Add tooltip
         const tooltip = document.createElement('div');
         tooltip.className = 'map-tooltip hidden';
@@ -217,8 +313,10 @@ export const MapController = {
             if (target && target.id && target.classList.contains('has-recipes')) {
                 // Show tooltip
                 const count = target.getAttribute('data-recipe-count');
-                const name = target.getAttribute('title') || target.id; // Use full title (e.g., "United Kingdom") or fallback to ID
-                tooltip.textContent = `${name}: ${count} recipe${count > 1 ? 's' : ''}`;
+                const translatedName = t('country_' + target.id);
+                const name = (translatedName !== 'country_' + target.id) ? translatedName : (target.getAttribute('title') || target.id);
+                const label = count === 1 ? t('recipeSingular') : t('recipePlural');
+                tooltip.textContent = `${name}: ${count} ${label}`;
                 tooltip.classList.remove('hidden');
                 
                 // Highlight
@@ -363,57 +461,96 @@ export const MapController = {
             if (elements.searchBar) elements.searchBar.classList.remove('hidden');
             if (elements.searchContainer) elements.searchContainer.classList.remove('hidden');
             toggleBtn.classList.remove('active');
-            if (elements.heroTitle) elements.heroTitle.textContent = 'Recipes';
+            if (elements.heroTitle) {
+                elements.heroTitle.setAttribute('data-i18n', 'recipesTitle');
+                elements.heroTitle.textContent = t('recipesTitle');
+            }
             window.scrollTo(0, 0);
         };
+        
+        // Store returnToList so popstate handler can call it without pushing history
+        this._returnToList = returnToList;
 
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 const isMapVisible = !mapView.classList.contains('hidden');
                 
                 if (isMapVisible) {
-                    returnToList();
+                    // Go back in browser history — popstate will call returnToList
+                    history.back();
                 } else {
-                    // Switch to Map
-                    mapView.classList.remove('hidden');
-                    gridView.classList.add('hidden');
-                    detailView.classList.add('hidden');
-                    heroSection.classList.remove('hidden'); // Ensure hero is visible for title
-                    addBtn.classList.remove('hidden'); // Explicitly show add button
-                    if (elements.searchBar) elements.searchBar.classList.add('hidden');
-                    // Ensure the container is visible but search bar is hidden
-                    if (elements.searchContainer) elements.searchContainer.classList.remove('hidden');
-                    
-                    toggleBtn.classList.add('active');
-                    if (elements.heroTitle) elements.heroTitle.textContent = 'World Recipes';
-                    
-                    window.scrollTo(0, 0);
-
-                    // Trigger map update
-                    const event = new CustomEvent('request-map-update');
-                    document.dispatchEvent(event);
+                    this.showMapView(true);
                 }
             });
         }
 
         if (mapBackBtn) {
-            mapBackBtn.addEventListener('click', returnToList);
+            mapBackBtn.addEventListener('click', () => history.back());
         }
     },
 
+    showMapView(pushHistory = true) {
+        if (pushHistory) {
+            history.pushState({ view: 'map' }, '');
+        }
+        const toggleBtn = elements.mapToggleBtn;
+        const gridView = elements.grid;
+        const mapView = elements.mapView;
+        const detailView = elements.detailView;
+        const heroSection = elements.heroSection;
+        const addBtn = elements.addBtn;
+
+        if (this.resetTransform) this.resetTransform();
+        mapView.classList.remove('hidden');
+        gridView.classList.add('hidden');
+        detailView.classList.add('hidden');
+        heroSection.classList.remove('hidden');
+        addBtn.classList.remove('hidden');
+        if (elements.searchBar) elements.searchBar.classList.add('hidden');
+        if (elements.searchContainer) elements.searchContainer.classList.remove('hidden');
+        if (toggleBtn) toggleBtn.classList.add('active');
+        if (elements.heroTitle) {
+            elements.heroTitle.setAttribute('data-i18n', 'worldRecipesTitle');
+            elements.heroTitle.textContent = t('worldRecipesTitle');
+        }
+        window.scrollTo(0, 0);
+        document.dispatchEvent(new CustomEvent('request-map-update'));
+    },
+
     openRecipeListModal(countryId, recipes) {
+        // Remove existing modal to prevent duplicate windows if triggered twice quickly
+        const existingModal = document.getElementById('map-list-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
         // Create modal content dynamically
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.id = 'map-list-modal';
         
-        const adjective = getAdjectiveFromId(countryId);
-        const title = adjective ? `${adjective} Recipes` : 'Recipes';
+        let title;
+        const recipesTitle = t('recipesTitle');
+        const translatedAdj = t('adj_' + countryId);
+
+        if (countryId === 'other') {
+            title = t('otherRecipesTitle');
+        } else if (translatedAdj !== 'adj_' + countryId) {
+            // In Portuguese "Italian Recipes" is "Receitas Italianas"
+            if (currentLang === 'pt') {
+                title = `${recipesTitle} ${translatedAdj}`;
+            } else {
+                title = `${translatedAdj} ${recipesTitle}`;
+            }
+        } else {
+            const adjective = getAdjectiveFromId(countryId);
+            title = adjective ? `${adjective} ${recipesTitle}` : recipesTitle;
+        }
 
         let recipesHtml = '';
         recipes.forEach(r => {
              // Use placeholder for recipes without images
-             const imageSrc = r.image ? `recipe://${r.image}` : 'https://placehold.co/400x300/png?text=No+Image';
+             const imageSrc = r.image ? `/${r.image}` : "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d6d6d6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='50' font-weight='500' fill='%23888888'%3ENo Image%3C/text%3E%3C/svg%3E";
              recipesHtml += `
                 <div class="map-list-item" data-id="${r.id}">
                     <img src="${imageSrc}" class="map-list-img">
@@ -442,6 +579,7 @@ export const MapController = {
         `;
 
         document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
 
         // Animation
         requestAnimationFrame(() => modal.classList.remove('hidden')); // It's not hidden by default unless we add class
@@ -452,6 +590,7 @@ export const MapController = {
         const closeBtn = modal.querySelector('#close-map-list');
         const close = () => {
             modal.remove();
+            document.body.style.overflow = '';
         };
         closeBtn.addEventListener('click', close);
         modal.addEventListener('click', (e) => {

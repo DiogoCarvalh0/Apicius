@@ -3,6 +3,15 @@ import { elements } from './dom.js';
 import { showDetail } from './navigation.js';
 
 /**
+ * Escapes HTML special characters to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
  * Detects recipe references in the format @RecipeName
  * @param {string} text 
  * @returns {Array<{name: string, index: number, length: number}>}
@@ -25,10 +34,13 @@ export function detectRecipeReferences(text) {
 /**
  * Renders text with recipe references replaced by clickable links
  * @param {string} text 
+ * @param {boolean} shouldEscape Whether to escape HTML in the context text
  * @returns {string} HTML string with links
  */
-export function renderRecipeReferences(text) {
+export function renderRecipeReferences(text, shouldEscape = true) {
     if (!text) return '';
+    
+    const escape = shouldEscape ? escapeHtml : (t => t);
     
     // We search for '@' and then try to find the longest recipe title that matches from that point.
     // This prevents the greedy regex from capturing trailing text that isn't part of the title.
@@ -51,7 +63,7 @@ export function renderRecipeReferences(text) {
     // Find all '@' symbols
     while ((match = atRegex.exec(text)) !== null) {
         const atIndex = match.index;
-        parts.push(text.substring(lastIndex, atIndex));
+        parts.push(escape(text.substring(lastIndex, atIndex)));
         
         const remainingText = text.substring(atIndex + 1);
         let foundRecipe = null;
@@ -82,7 +94,9 @@ export function renderRecipeReferences(text) {
         
         if (foundRecipe) {
             const actualTitleMatch = remainingText.substring(0, foundRecipe.title.length);
-            parts.push(`<span class="recipe-reference" data-msg-id="${foundRecipe.id}">@${actualTitleMatch}</span>`);
+            const safeId = escapeHtml(foundRecipe.id);
+            const safeTitle = escapeHtml(actualTitleMatch);
+            parts.push(`<span class="recipe-reference" data-msg-id="${safeId}">@${safeTitle}</span>`);
             lastIndex = atIndex + 1 + foundRecipe.title.length;
             atRegex.lastIndex = lastIndex; // Skip ahead
         } else {
@@ -91,8 +105,54 @@ export function renderRecipeReferences(text) {
         }
     }
     
-    parts.push(text.substring(lastIndex));
+    parts.push(escape(text.substring(lastIndex)));
     return parts.join('');
+}
+
+/**
+ * Safely renders recipe references inside a string that already contains HTML.
+ * It recursively walks text nodes to avoid breaking existing tags or double-linking.
+ * @param {string} html 
+ * @returns {string} Processed HTML
+ */
+export function renderRecipeReferencesHtml(html) {
+    if (!html) return '';
+    
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    
+    function processNode(node) {
+        // Skip nodes that are already recipe references
+        if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('recipe-reference')) {
+            return;
+        }
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            // Only process if it contains an '@'
+            if (text.includes('@')) {
+                const rendered = renderRecipeReferences(text, false);
+                // If anything changed, replace the text node with the new HTML structures
+                if (rendered !== text) {
+                    const fragment = document.createElement('span');
+                    fragment.innerHTML = rendered;
+                    
+                    // Replace text node with fragment contents
+                    while (fragment.firstChild) {
+                        node.parentNode.insertBefore(fragment.firstChild, node);
+                    }
+                    node.parentNode.removeChild(node);
+                }
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            // Recursively process children
+            // Need to convert to array to avoid issues with live NodeList when replacing
+            Array.from(node.childNodes).forEach(processNode);
+        }
+    }
+    
+    Array.from(div.childNodes).forEach(processNode);
+    return div.innerHTML;
 }
 
 /**

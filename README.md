@@ -1,6 +1,6 @@
 # Apicius
 
-Apicius is a recipy app with the sole difference that everything is stored localy with a clean UI. In other words, it is an app made thinking about me for you :)
+Apicius is a self-hosted recipy web app with the sole difference that everything is stored localy with a clean UI. In other words, it is an app made thinking about me for you :)
 
 <p align="center">
   <img src="/assets/Demo/Demo.gif?raw=true" width="100%" alt="Demo" />
@@ -12,11 +12,41 @@ Apicius is a recipy app with the sole difference that everything is stored local
 # Install dependencies
 npm install
 
-# Run the app
+# Start the server (default port: 3000)
 npm start
+```
 
-# Build the app (run command and the click on the .dmg file inside the dist app)
-npm run dist
+Then open **http://localhost:3000** in your browser.
+
+## Docker
+
+```bash
+# Build the image
+docker build -t apicius .
+
+# Run the container (maps port 3000 and persists your database)
+docker run -d \
+  -p 3000:3000 \
+  -v $(pwd)/database:/usr/src/app/database \
+  --name apicius \
+  apicius
+```
+
+Then open **http://localhost:3000** (or replace `localhost` with your NAS/server IP).
+
+## Project Structure
+
+```
+apicius/
+├── server.js          # Express API server
+├── index.html         # App shell
+├── styles.css         # Global styles
+├── renderer/          # Frontend JavaScript
+│   ├── main.js        # Entry point & history navigation
+│   ├── mapController.js
+│   └── modules/       # Filters, forms, i18n, navigation…
+├── assets/            # Static assets (images, world map SVG)
+└── database/          # Local JSON recipe database (git-ignored)
 ```
 
 ## Fun Fact

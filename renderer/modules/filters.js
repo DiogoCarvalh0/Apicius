@@ -1,10 +1,16 @@
 import { elements } from './dom.js';
 import { state, setCurrentMinRating } from './state.js';
+import { t, currentLang } from './i18n.js';
 import { parseIngredient, parseDuration } from './utils.js';
 import { renderRecipes } from './view.js';
 
 export function initFilters() {
-    elements.searchInput.addEventListener('input', filterRecipes);
+    // Debounced search
+    let searchDebounceTimer = null;
+    elements.searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(filterRecipes, 200);
+    });
 
     // Toggle Dropdown
     elements.filterTagsBtn.addEventListener('click', (e) => {
@@ -46,6 +52,7 @@ export function initFilters() {
 
     document.addEventListener('keydown', (e) => {
         // Only trigger if a dropdown is active
+        const tagsActive = elements.filterTagsDropdown.classList.contains('active');
         const ingredientsActive = elements.filterIngredientsDropdown.classList.contains('active');
         const purposeActive = elements.filterPurposeDropdown.classList.contains('active');
 
@@ -96,6 +103,23 @@ export function initFilters() {
     if (elements.clearAllFiltersBtn) {
         elements.clearAllFiltersBtn.addEventListener('click', clearAllFilters);
     }
+
+    document.addEventListener('app-language-changed', () => {
+        populateTagsFilter();
+        populateIngredientsFilter();
+        populatePurposeFilter();
+        if (state.currentMinRating === 0) {
+            if (elements.filterRatingValueDisplay) elements.filterRatingValueDisplay.textContent = t('any');
+        }
+        updateFilterButtonText(elements.filterTagsBtn, 'Tags', '.tag-checkbox');
+        updateFilterButtonText(elements.filterIngredientsBtn, 'Ingredients', '.ingredient-checkbox');
+        updateFilterButtonText(elements.filterPurposeBtn, 'Purpose', '.purpose-checkbox');
+    });
+
+    // Initial state for rating label
+    if (elements.filterRatingValueDisplay && state.currentMinRating === 0) {
+        elements.filterRatingValueDisplay.textContent = t('any');
+    }
 }
 
 export function clearAllFilters() {
@@ -111,7 +135,7 @@ export function clearAllFilters() {
         stars[i].style.webkitBackgroundClip = 'initial';
         stars[i].style.webkitTextFillColor = 'initial';
     }
-    if (elements.filterRatingValueDisplay) elements.filterRatingValueDisplay.textContent = 'Any';
+    if (elements.filterRatingValueDisplay) elements.filterRatingValueDisplay.textContent = t('any');
     if (elements.clearRatingFilterBtn) elements.clearRatingFilterBtn.classList.add('hidden');
 
     // Reset Tags
@@ -134,7 +158,10 @@ export function populateTagsFilter() {
     const allLabels = new Set();
     state.recipes.forEach(r => {
         if (r.labels && Array.isArray(r.labels)) {
-            r.labels.forEach(l => allLabels.add(l));
+            r.labels.forEach(l => {
+                const cleanLabel = l.replace(/\s+/g, ' ').trim();
+                if (cleanLabel) allLabels.add(cleanLabel);
+            });
         }
     });
 
@@ -149,13 +176,19 @@ export function populateTagsFilter() {
     sortedLabels.forEach(label => {
         const div = document.createElement('div');
         div.className = 'tag-option';
-        div.innerHTML = `
-            <label style="cursor:pointer; width:100%; display:flex; align-items:center;">
-                <input type="checkbox" value="${label}" class="tag-checkbox">
-                ${label}
-            </label>
-        `;
-        div.querySelector('input').addEventListener('change', () => {
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'cursor:pointer; width:100%; display:flex; align-items:center;';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = label;
+        checkbox.className = 'tag-checkbox';
+        lbl.appendChild(checkbox);
+        const textSpan = document.createElement('span');
+        textSpan.style.cssText = 'flex: 1; word-break: break-word; line-height: 1.2; text-align: left;';
+        textSpan.textContent = label;
+        lbl.appendChild(textSpan);
+        div.appendChild(lbl);
+        checkbox.addEventListener('change', () => {
              updateFilterButtonText(elements.filterTagsBtn, 'Tags', '.tag-checkbox');
              filterRecipes();
         });
@@ -196,13 +229,19 @@ export function populateIngredientsFilter() {
         
         const div = document.createElement('div');
         div.className = 'tag-option'; 
-        div.innerHTML = `
-            <label style="cursor:pointer; width:100%; display:flex; align-items:center;">
-                <input type="checkbox" value="${ing}" class="ingredient-checkbox">
-                ${displayIng}
-            </label>
-        `;
-        div.querySelector('input').addEventListener('change', () => {
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'cursor:pointer; width:100%; display:flex; align-items:center;';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = ing;
+        checkbox.className = 'ingredient-checkbox';
+        lbl.appendChild(checkbox);
+        const textSpan = document.createElement('span');
+        textSpan.style.cssText = 'flex: 1; word-break: break-word; line-height: 1.2; text-align: left;';
+        textSpan.textContent = displayIng;
+        lbl.appendChild(textSpan);
+        div.appendChild(lbl);
+        checkbox.addEventListener('change', () => {
             updateFilterButtonText(elements.filterIngredientsBtn, 'Ingredients', '.ingredient-checkbox');
             filterRecipes();
         });
@@ -216,14 +255,15 @@ export function populatePurposeFilter() {
     elements.filterPurposeList.innerHTML = '';
     
     purposes.forEach(purpose => {
-        const displayPurpose = purpose.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const i18nKey = 'purpose_' + purpose.replace('/', '_').replace(' ', '_');
+        const displayPurpose = t(i18nKey);
         
         const div = document.createElement('div');
         div.className = 'tag-option'; 
         div.innerHTML = `
             <label style="cursor:pointer; width:100%; display:flex; align-items:center;">
                 <input type="checkbox" value="${purpose}" class="purpose-checkbox">
-                ${displayPurpose}
+                <span style="flex: 1; word-break: break-word; line-height: 1.2; text-align: left;">${displayPurpose}</span>
             </label>
         `;
         div.querySelector('input').addEventListener('change', () => {
@@ -274,7 +314,7 @@ export function initRatingFilter() {
     elements.clearRatingFilterBtn.addEventListener('click', () => {
         setCurrentMinRating(0);
         updateFilterStars(0);
-        elements.filterRatingValueDisplay.textContent = 'Any';
+        elements.filterRatingValueDisplay.textContent = t('any');
         elements.clearRatingFilterBtn.classList.add('hidden');
         filterRecipes();
     });
@@ -303,7 +343,10 @@ function updateFilterStars(value, isPreview = false) {
 
 function updateFilterButtonText(btn, defaultText, checkboxClass) {
     const count = document.querySelectorAll(`${checkboxClass}:checked`).length;
-    btn.textContent = count > 0 ? `${defaultText} (${count})` : `Filter by ${defaultText}`;
+    const labelKey = 'filter' + defaultText + 'Label';
+    const translatedLabel = t(labelKey);
+    const filterByPrefix = currentLang === 'pt' ? 'Filtrar por ' : 'Filter by ';
+    btn.textContent = count > 0 ? `${translatedLabel} (${count})` : `${filterByPrefix}${translatedLabel}`;
 }
 
 export function filterRecipes() {
@@ -350,20 +393,20 @@ export function filterRecipes() {
     document.dispatchEvent(new CustomEvent('recipes-updated', { detail: filtered }));
     
     if (selectedTags.length > 0) {
-        elements.filterTagsBtn.textContent = `Tags (${selectedTags.length})`;
+        elements.filterTagsBtn.textContent = `${t('filterTagsLabel')} (${selectedTags.length})`;
     } else {
-        elements.filterTagsBtn.textContent = 'Filter by Tags';
+        elements.filterTagsBtn.textContent = currentLang === 'pt' ? 'Filtrar por Tags' : 'Filter by Tags';
     }
     
     if (selectedIngredients.length > 0) {
-        elements.filterIngredientsBtn.textContent = `Ingredients (${selectedIngredients.length})`;
+        elements.filterIngredientsBtn.textContent = `${t('filterIngredientsLabel')} (${selectedIngredients.length})`;
     } else {
-        elements.filterIngredientsBtn.textContent = 'Filter by Ingredients';
+        elements.filterIngredientsBtn.textContent = currentLang === 'pt' ? 'Filtrar por Ingredientes' : 'Filter by Ingredients';
     }
 
     if (selectedPurposes.length > 0) {
-        elements.filterPurposeBtn.textContent = `Purpose (${selectedPurposes.length})`;
+        elements.filterPurposeBtn.textContent = `${t('filterPurposeLabel')} (${selectedPurposes.length})`;
     } else {
-        elements.filterPurposeBtn.textContent = 'Filter by Purpose';
+        elements.filterPurposeBtn.textContent = currentLang === 'pt' ? 'Filtrar por Propósito' : 'Filter by Purpose';
     }
 }

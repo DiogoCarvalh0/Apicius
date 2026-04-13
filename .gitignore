@@ -10,19 +10,28 @@ build/*
 Thumbs.db
 
 # User Data / Database
-# Assuming you don't want to commit your personal recipe database to the public code repo
-Database/*
-*.json.bak
+# Personal recipe database — not committed to the public repo
+database/*
 
-# Local Configuration
+# Environment & local config
 .env
+.env.local
+.env.*.local
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
-# Backups
-*.old
-*.bak
-renderer.js.old
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.swp
