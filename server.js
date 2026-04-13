@@ -11,26 +11,37 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Config Setup
-const storagePath = path.join(__dirname, 'database');
-const recipesFile = path.join(storagePath, 'recipes.json');
-const imagesDir = path.join(storagePath, 'images');
+const dbDirFull = process.env.DB_DIR || path.join(__dirname, 'database');
+const dbDir = path.isAbsolute(dbDirFull) ? dbDirFull : path.resolve(__dirname, dbDirFull);
 
+const recipesFile = path.join(dbDir, 'recipes.json');
+const imagesDir = path.join(dbDir, 'images');
 const thumbsDir = path.join(imagesDir, 'thumb');
 
-// Ensure database and images directories exist
-if (!fs.existsSync(storagePath)) {
-  fs.mkdirSync(storagePath, { recursive: true });
+console.log('--- Apicius Server Startup ---');
+console.log('Process directory (__dirname):', __dirname);
+console.log('Database Directory (DB_DIR):', dbDir);
+console.log('Images Directory:', imagesDir);
+console.log('Thumbnails Directory:', thumbsDir);
+
+// Verify write permissions
+try {
+    [dbDir, imagesDir, thumbsDir].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.accessSync(dir, fs.constants.W_OK);
+        console.log(`Directory OK (Writable): ${dir}`);
+    });
+} catch (err) {
+    console.error('CRITICAL: Directory permission error!', err.message);
+    console.error('Make sure the server user has write access to the database folder.');
 }
-if (!fs.existsSync(imagesDir)) {
-  fs.mkdirSync(imagesDir, { recursive: true });
-}
-if (!fs.existsSync(thumbsDir)) {
-  fs.mkdirSync(thumbsDir, { recursive: true });
-}
+console.log('------------------------------');
 
 // Ensure recipes.json exists
 if (!fs.existsSync(recipesFile)) {
-  fs.writeFileSync(recipesFile, '[]');
+    fs.writeFileSync(recipesFile, '[]');
 }
 
 // In-memory recipe cache
@@ -85,6 +96,42 @@ async function readRecipes() {
 async function writeRecipes(recipes) {
   recipesCache = recipes;
   await fsPromises.writeFile(recipesFile, JSON.stringify(recipes, null, 2));
+}
+
+// Case-insensitive file unlinking helper (Crucial for Linux NAS)
+async function safeUnlink(absolutePath) {
+  if (!absolutePath) return;
+  
+  // Try exact match first
+  if (fs.existsSync(absolutePath)) {
+    try {
+      fs.unlinkSync(absolutePath);
+      console.log(`Unlinked (exact match): ${absolutePath}`);
+      return true;
+    } catch (err) {
+      console.error(`Failed to unlink exactly (${err.code}): ${err.message}`);
+    }
+  }
+
+  // Fallback: Check for case-insensitive match in parent directory
+  try {
+    const dir = path.dirname(absolutePath);
+    const filename = path.basename(absolutePath).toLowerCase();
+    if (!fs.existsSync(dir)) return false;
+
+    const files = await fsPromises.readdir(dir);
+    const target = files.find(f => f.toLowerCase() === filename);
+    
+    if (target) {
+      const realPath = path.join(dir, target);
+      fs.unlinkSync(realPath);
+      console.log(`Unlinked (case-insensitive match): ${realPath}`);
+      return true;
+    }
+  } catch (err) {
+    console.error(`SafeUnlink fallback failed: ${err.message}`);
+  }
+  return false;
 }
 
 // ---- API Endpoints ---- //
@@ -241,33 +288,35 @@ app.post('/api/recipes', async (req, res) => {
       
       // If image changed or was removed, and old image exists, check if it's still needed
       if (oldRecipe.image && oldRecipe.image !== recipe.image) {
-        const isImageUsedElsewhere = recipes.some((r, idx) => idx !== index && r.image === oldRecipe.image);
+        console.log(`Checking if image ${oldRecipe.image} (normalized: ${path.normalize(oldRecipe.image)}) is still used after update...`);
+        
+        const isImageUsedElsewhere = recipes.some((r, idx) => {
+          if (idx === index || !r.image) return false;
+          // Robust comparison: resolve both relative to dbDir and compare absolute paths
+          const abs1 = path.resolve(dbDir, r.image);
+          const abs2 = path.resolve(dbDir, oldRecipe.image);
+          return abs1.toLowerCase() === abs2.toLowerCase();
+        });
         
         if (!isImageUsedElsewhere) {
-          // extract filename safely
-          const oldImageName = oldRecipe.image.includes('/') ? oldRecipe.image.split('/').pop() : oldRecipe.image;
-          const oldImagePath = path.join(imagesDir, oldImageName);
+          // Resolve full path for deletion
+          const oldImagePath = path.resolve(dbDir, oldRecipe.image);
           
-          if (fs.existsSync(oldImagePath)) {
-            try {
-              fs.unlinkSync(oldImagePath);
-              console.log(`Deleted unused image: ${oldImageName}`);
-            } catch (err) {
-              console.error('Failed to delete old image:', err);
+          console.log(`Attempting to delete unused image: ${oldImagePath}`);
+          if (fs.existsSync(oldImagePath) || true) { // Always try safeUnlink which handles exists check
+            const deleted = await safeUnlink(oldImagePath);
+            if (!deleted) {
+              console.warn(`Could not find or delete image: ${oldImagePath}`);
             }
           }
           
           // Also delete old thumbnail
+          const oldImageName = path.basename(oldImagePath);
           const oldThumbName = `${path.parse(oldImageName).name}.webp`;
           const oldThumbPath = path.join(thumbsDir, oldThumbName);
-          if (fs.existsSync(oldThumbPath)) {
-            try {
-              fs.unlinkSync(oldThumbPath);
-              console.log(`Deleted unused thumbnail: ${oldThumbName}`);
-            } catch (err) {
-              console.error('Failed to delete old thumbnail:', err);
-            }
-          }
+          await safeUnlink(oldThumbPath);
+        } else {
+          console.log(`Image ${oldRecipe.image} is still used by other recipes. Skipping deletion.`);
         }
       }
       recipes[index] = recipe;
@@ -292,24 +341,31 @@ app.delete('/api/recipes/:id', async (req, res) => {
     const recipeToDelete = recipes.find(r => r.id === recipeId);
     
     if (recipeToDelete && recipeToDelete.image) {
-      const imageName = recipeToDelete.image.replace('images/', '');
-      const imagePath = path.join(imagesDir, imageName);
-      if (fs.existsSync(imagePath)) {
-        try {
-          fs.unlinkSync(imagePath);
-        } catch (err) {
-          console.error('Failed to delete image:', err);
+      console.log(`Checking if image ${recipeToDelete.image} is still used after recipe deletion...`);
+      // Check if any OTHER recipe uses this image
+      const isImageUsedElsewhere = recipes.some(r => {
+        if (r.id === recipeId || !r.image) return false;
+        const abs1 = path.resolve(dbDir, r.image);
+        const abs2 = path.resolve(dbDir, recipeToDelete.image);
+        return abs1.toLowerCase() === abs2.toLowerCase();
+      });
+      
+      if (!isImageUsedElsewhere) {
+        const imagePath = path.resolve(dbDir, recipeToDelete.image);
+        console.log(`Attempting to delete image for deleted recipe: ${imagePath}`);
+        
+        const deleted = await safeUnlink(imagePath);
+        if (!deleted) {
+           console.warn(`Could not find or delete image: ${imagePath}`);
         }
-      }
-      // Also delete thumbnail
-      const thumbName = `${path.parse(imageName).name}.webp`;
-      const thumbPath = path.join(thumbsDir, thumbName);
-      if (fs.existsSync(thumbPath)) {
-        try {
-          fs.unlinkSync(thumbPath);
-        } catch (err) {
-          console.error('Failed to delete thumbnail:', err);
-        }
+        
+        // Also delete thumbnail
+        const imageName = path.basename(imagePath);
+        const thumbName = `${path.parse(imageName).name}.webp`;
+        const thumbPath = path.join(thumbsDir, thumbName);
+        await safeUnlink(thumbPath);
+      } else {
+        console.log(`Image ${recipeToDelete.image} is still used by other recipes. Skipping deletion.`);
       }
     }
 
@@ -364,7 +420,56 @@ app.post('/api/image', upload.single('image'), async (req, res) => {
 
 // Settings & Config
 app.get('/api/config', (req, res) => {
-  res.json({ storagePath });
+  res.json({ storagePath: dbDir });
+});
+
+// Image Cleanup Tool (Manual Trigger)
+app.post('/api/cleanup-images', async (req, res) => {
+  try {
+    const recipes = await readRecipes();
+    const usedImages = new Set();
+    const usedThumbs = new Set();
+    
+    recipes.forEach(r => {
+      if (r.image) {
+        usedImages.add(path.basename(path.resolve(dbDir, r.image)).toLowerCase());
+        const thumbName = `${path.parse(path.basename(r.image)).name}.webp`.toLowerCase();
+        usedThumbs.add(thumbName);
+      }
+    });
+
+    console.log(`Running Cleanup. Found ${usedImages.size} images used by recipes.`);
+
+    // Scan Images Dir
+    const allFiles = await fsPromises.readdir(imagesDir);
+    let deletedCount = 0;
+    
+    for (const file of allFiles) {
+      const filePath = path.join(imagesDir, file);
+      if (fs.statSync(filePath).isDirectory()) continue; // Skip thumbs folder
+      
+      if (!usedImages.has(file.toLowerCase())) {
+        console.log(`Cleanup: Removing orphaned image ${file}`);
+        await safeUnlink(filePath);
+        deletedCount++;
+      }
+    }
+
+    // Scan Thumbs Dir
+    const allThumbs = await fsPromises.readdir(thumbsDir);
+    for (const thumb of allThumbs) {
+      if (!usedThumbs.has(thumb.toLowerCase())) {
+        console.log(`Cleanup: Removing orphaned thumbnail ${thumb}`);
+        await safeUnlink(path.join(thumbsDir, thumb));
+        deletedCount++;
+      }
+    }
+
+    res.json({ success: true, deleted: deletedCount });
+  } catch (err) {
+    console.error('Cleanup failed:', err);
+    res.status(500).json({ error: 'Cleanup failed' });
+  }
 });
 
 // Generate thumbnails for existing images that don't have one

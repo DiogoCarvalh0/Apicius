@@ -477,10 +477,17 @@ textarea.clean-input {
 }
 
 /* Strip inline styles from copy-pasted rich text in notes to prevent dark-mode issues */
+#detail-notes,
+.rich-editor,
 #detail-notes *:not(.recipe-reference),
 .rich-editor *:not(.recipe-reference) {
     background-color: transparent !important;
     color: inherit !important;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, 'Courier New', monospace !important;
+    font-size: 0.95rem !important;
+    line-height: 1.2 !important; /* Compact line-height for ASCII table alignment */
+    vertical-align: baseline !important;
+    white-space: pre-wrap !important; /* Preserve spaces for tables */
 }
 
 /* File Input */

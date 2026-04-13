@@ -201,20 +201,28 @@ export function initForms() {
     elements.addForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Extra safety check
-        if (elements.recipeTitle.value.includes('@')) {
-            alert('Recipe titles cannot contain the "@" character.');
-            return;
+        const saveBtn = elements.saveRecipeBtn;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            elements.addModal.style.pointerEvents = 'none'; // Block all clicks on modal
         }
-        
-        const fileInput = elements.recipeImageFile;
-        let imagePath = elements.addForm.dataset.existingImage || '';
-        
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const buffer = await file.arrayBuffer();
-            imagePath = await window.electronAPI.saveImage(file.name, buffer);
-        }
+
+        try {
+            // Extra safety check
+            if (elements.recipeTitle.value.includes('@')) {
+                alert('Recipe titles cannot contain the "@" character.');
+                return;
+            }
+            
+            const fileInput = elements.recipeImageFile;
+            let imagePath = elements.addForm.dataset.existingImage || '';
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const buffer = await file.arrayBuffer();
+                imagePath = await window.electronAPI.saveImage(file.name, buffer);
+            }
 
         const ingredients = [];
         elements.ingredientsBuilder.querySelectorAll('.builder-section').forEach(section => {
@@ -296,7 +304,18 @@ export function initForms() {
         
         await loadRecipes();
         showDetail(newRecipe);
-    });
+    } catch (err) {
+        console.error('Submission failed:', err);
+        alert('Failed to save recipe. Please try again.');
+    } finally {
+        const saveBtn = elements.saveRecipeBtn;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Recipe';
+            elements.addModal.style.pointerEvents = 'auto';
+        }
+    }
+});
 
     elements.addIngredientSectionBtn.addEventListener('click', addIngredientSectionBtnHandler);
     elements.addInstructionSectionBtn.addEventListener('click', addInstructionSectionBtnHandler);

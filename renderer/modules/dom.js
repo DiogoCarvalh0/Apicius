@@ -7,6 +7,7 @@ export const elements = {
     addBtn: document.getElementById('add-recipe-btn'),
     closeBtn: document.getElementById('close-add-modal'),
     addForm: document.getElementById('add-recipe-form'),
+    saveRecipeBtn: document.getElementById('save-recipe-btn'),
     
     // Detail Actions
     editBtn: document.getElementById('edit-btn'),
